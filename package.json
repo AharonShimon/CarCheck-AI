@@ -1,13 +1,14 @@
 {
-  "name": "car-check-backend",
+  "name": "carcheck-ai",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Car check search tool",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "express": "^4.18.2"
-  },
-  "scripts": {
-    "start": "node index.js"
   }
 }
