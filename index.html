@@ -8,236 +8,183 @@
         :root { --primary: #00F2FF; --accent: #7000FF; --bg: #0A0A0C; --card: #16161D; --text: #E0E0E0; --danger: #FF3B3B; --success: #00FF85; --warning: #FFB800; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); margin: 0; direction: rtl; }
         .container { padding: 20px; max-width: 500px; margin: auto; padding-bottom: 50px; }
-        
-        h1 { text-align:center; margin-top: 10px; margin-bottom: 20px; font-size: 28px; }
+        h1 { text-align:center; margin-bottom: 20px; }
 
-        .plate-container { background: #FFB800; padding: 8px; border-radius: 12px; border: 3px solid #000; margin-bottom: 20px; display: flex; align-items: center; position: relative; box-shadow: 0 4px 15px rgba(255, 184, 0, 0.2); }
-        .plate-input { background: none; border: none; font-size: 40px; font-weight: 900; width: 100%; text-align: center; outline: none; color: #000; letter-spacing: 4px; font-family: monospace; }
-        .il-tag { background: #003399; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; position: absolute; left: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+        /* לוחית */
+        .plate-container { background: #FFB800; padding: 5px; border-radius: 12px; border: 3px solid #000; display: flex; align-items: center; position: relative; margin-bottom: 15px; }
+        .plate-input { background: none; border: none; font-size: 35px; font-weight: 900; width: 100%; text-align: center; outline: none; color: #000; letter-spacing: 3px; font-family: monospace; }
+        .il-tag { background: #003399; color: white; padding: 3px 6px; border-radius: 4px; font-size: 10px; position: absolute; left: 8px; font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1; }
 
+        /* כפתורים */
+        .btn-plate { background: #007AFF; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; margin-bottom: 25px; }
+        .btn-ai { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 700; width: 100%; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 20px rgba(0, 242, 255, 0.25); }
+
+        /* שדות */
         .ios-field { width: 100%; padding: 15px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 12px; box-sizing: border-box; font-size: 17px; transition: 0.3s; }
         .ios-field:focus { border-color: var(--primary); outline: none; }
-        
-        .btn-main { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 16px; border-radius: 16px; font-size: 18px; font-weight: 700; width: 100%; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 20px rgba(0, 242, 255, 0.25); }
-        .btn-main:active { transform: scale(0.98); }
 
-        #ai-card { display: none; background: rgba(22, 22, 29, 0.95); border: 1px solid rgba(0, 242, 255, 0.3); border-radius: 18px; padding: 20px; margin: 25px 0; animation: fadeIn 0.6s; }
-        #ai-text { white-space: pre-wrap; line-height: 1.6; font-size: 15px; color: #ddd; }
+        /* תוצאות */
+        #ai-card { display: none; background: rgba(22, 22, 29, 0.95); border: 1px solid rgba(0, 242, 255, 0.3); border-radius: 18px; padding: 20px; margin: 20px 0; animation: fadeIn 0.5s; }
+        #status-msg { text-align: center; margin-bottom: 10px; font-weight: bold; min-height: 20px; font-size: 14px; }
         
-        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .spinner { width: 50px; height: 50px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        /* טעינה */
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* סגנונות לצ'ק ליסט */
-        .category { margin-top: 30px; }
-        .cat-header { color: var(--primary); font-size: 19px; font-weight: 800; border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 12px; }
-        .check-item { background: var(--card); padding: 15px; border-radius: 14px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
-        .cb { width: 24px; height: 24px; border: 2px solid #555; border-radius: 8px; margin-left: 15px; }
-        .cb.checked { background: var(--danger); border-color: var(--danger); display: flex; align-items: center; justify-content: center; }
-        .cb.checked::after { content: "✕"; color: white; font-size: 14px; font-weight: bold; }
+        /* מסך בדיקה */
+        .check-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; align-items: center; }
+        .cb { width: 24px; height: 24px; border: 2px solid #555; border-radius: 6px; margin-left: 15px; }
+        .cb.checked { background: var(--danger); border-color: var(--danger); }
+        .category { margin-top: 25px; color: var(--primary); font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <p style="color: var(--primary); margin-top: 20px; font-weight: bold;">מבצע בדיקה מקיפה...</p>
+    <p id="loading-text" style="color: white; margin-top: 15px;">טוען...</p>
 </div>
 
 <div id="screen-input" class="container">
-    <h1>CarCheck <span style="color:var(--primary)">AI PRO</span></h1>
+    <h1>CarCheck <span style="color:var(--primary)">AI</span></h1>
     
+    <label style="color:#888; font-size:14px;">שלב 1: איתור פרטים (אופציונלי)</label>
     <div class="plate-container">
         <div class="il-tag"><span>IL</span><span>ישראל</span></div>
         <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8" inputmode="numeric">
     </div>
-
-    <div id="status" style="text-align: center; margin-bottom: 15px; min-height: 25px; font-weight:bold;"></div>
+    <button class="btn-plate" onclick="getCarDetails()">🔍 אתר פרטי רכב ממשרד התחבורה</button>
     
-    <button class="btn-main" onclick="analyzeCar()">🔍 נתח רכב (AI)</button>
+    <div id="status-msg"></div>
+
+    <div style="border-top: 1px solid #333; padding-top: 20px; margin-top: 10px;">
+        <label style="color:#888; font-size:14px; display:block; margin-bottom:10px;">שלב 2: פרטי הרכב (לניתוח AI)</label>
+        <input id="brand" class="ios-field" placeholder="יצרן (למשל: מאזדה)">
+        <input id="model" class="ios-field" placeholder="דגם (למשל: 3)">
+        <input id="year" class="ios-field" type="number" placeholder="שנה" inputmode="numeric">
+        
+        <button class="btn-ai" onclick="analyzeAI()">🤖 נתח אמינות ותקלות (AI)</button>
+    </div>
 
     <div id="ai-card">
-        <div style="display:flex; align-items:center; margin-bottom:10px;">
-            <span style="font-size:24px; margin-left:10px;">🤖</span>
-            <strong style="color:var(--primary); font-size: 18px;">דוח אמינות AI</strong>
-        </div>
-        <div id="ai-text"></div>
+        <div id="ai-text" style="line-height:1.6; color:#ddd;"></div>
     </div>
 
-    <div style="margin-top: 30px;">
-        <p style="margin-bottom:10px; font-size:14px; color:#888;">פרטי הרכב (יתמלאו אוטומטית או מלא ידנית):</p>
-        <input id="brand" class="ios-field" placeholder="יצרן (למשל: יונדאי)">
-        <input id="model" class="ios-field" placeholder="דגם (למשל: איוניק)">
-        <input id="year" class="ios-field" type="number" placeholder="שנה" inputmode="numeric">
-    </div>
-
-    <button class="btn-main" style="background: #222; margin-top: 20px; border: 1px solid #333;" onclick="startInspection()">המשך לצ'ק-ליסט בדיקה ➔</button>
+    <button class="btn-plate" style="background:#222; margin-top:30px; border:1px solid #444;" onclick="goToInspection()">המשך לצ'ק ליסט בדיקה ➔</button>
 </div>
 
 <div id="screen-check" class="container" style="display:none">
-    <h2 id="display-name" style="text-align:center; color:white;"></h2>
-    <div class="plate-container" style="padding: 5px; margin: 0 auto 20px auto; width: fit-content;">
-        <span id="display-plate" style="font-size: 20px; font-weight: bold; color: black; letter-spacing: 2px;"></span>
-    </div>
+    <h2 id="display-name" style="text-align:center; color:white"></h2>
+    
+    <div id="checklist-ai-container"></div>
+
     <div id="list-content"></div>
-    <div style="margin-top: 40px;">
-        <button class="btn-main" style="background:#25D366; margin-bottom:15px;" onclick="shareToWhatsApp()">שתף בוואטסאפ 🟢</button>
-        <button class="btn-main" style="background: transparent; color: #888; font-size:14px;" onclick="location.reload()">התחל מחדש ↺</button>
-    </div>
+    
+    <button class="btn-plate" style="background:#25D366; margin-top:20px;" onclick="shareToWhatsApp()">שתף בוואטסאפ 🟢</button>
+    <button class="btn-plate" style="background:transparent; color:#888;" onclick="location.reload()">חזרה להתחלה</button>
 </div>
 
 <script>
-function formatText(text) {
-    if (!text) return "";
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*/g, '•');
-}
-
-async function analyzeCar() {
+// פונקציה 1: רק משרד התחבורה
+async function getCarDetails() {
     const plate = document.getElementById('plate').value;
-    const brandField = document.getElementById('brand');
-    const modelField = document.getElementById('model');
-    const yearField = document.getElementById('year');
+    const status = document.getElementById('status-msg');
     
-    const overlay = document.getElementById('loading-overlay');
-    const status = document.getElementById('status');
-    const aiCard = document.getElementById('ai-card');
+    if(plate.length < 7) {
+        status.innerHTML = "<span style='color:var(--warning)'>מספר לוחית קצר מדי</span>";
+        return;
+    }
 
+    showLoading("מחפש במשרד התחבורה...");
     status.innerHTML = "";
-    aiCard.style.display = "none";
-    overlay.style.display = "flex";
 
     try {
-        const response = await fetch('/analyze-car', {
+        const res = await fetch('/get-car-details', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                plate, 
-                brand: brandField.value, 
-                model: modelField.value, 
-                year: yearField.value 
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ plate })
         });
-
-        const data = await response.json();
+        const data = await res.json();
 
         if (data.success) {
-            // 1. מילוי שדות אוטומטי אם הגיע מידע מהממשלה
-            if (data.detectedInfo) {
-                if(data.detectedInfo.brand) brandField.value = data.detectedInfo.brand;
-                if(data.detectedInfo.model) modelField.value = data.detectedInfo.model;
-                if(data.detectedInfo.year) yearField.value = data.detectedInfo.year;
-            }
-
-            // 2. הצגת הודעה לפי הסטטוס הממשלתי
-            if (data.govStatus === "SUCCESS") {
-                status.innerHTML = "<span style='color:var(--success)'>✅ רכב זוהה במשרד התחבורה!</span>";
-            } else if (data.govStatus === "NOT_FOUND") {
-                status.innerHTML = "<span style='color:var(--warning)'>⚠️ הרכב לא נמצא במאגר, אך בוצע ניתוח ידני.</span>";
-            } else if (data.govStatus === "API_ERROR" || data.govStatus === "TIMEOUT") {
-                status.innerHTML = "<span style='color:var(--warning)'>⚠️ שגיאת תקשורת לממשלה - בוצע ניתוח ידני.</span>";
-            } else {
-                status.innerHTML = "<span style='color:var(--success)'>✅ ניתוח AI בוצע בהצלחה.</span>";
-            }
-
-            // 3. הצגת הניתוח
-            aiCard.style.display = "block";
-            document.getElementById('ai-text').innerHTML = formatText(data.aiAnalysis);
-
+            document.getElementById('brand').value = data.data.brand;
+            document.getElementById('model').value = data.data.model;
+            document.getElementById('year').value = data.data.year;
+            status.innerHTML = "<span style='color:var(--success)'>✅ פרטים אותרו ומולאו!</span>";
         } else {
-            // ניהול שגיאות (כאשר אין פרטים בכלל)
-            if (data.error === "MISSING_DETAILS") {
-                if (data.govStatus === "NOT_FOUND") {
-                    status.innerHTML = "<span style='color:var(--warning)'>⚠️ הרכב לא קיים במאגר. נא למלא יצרן ודגם ידנית.</span>";
-                } else if (data.govStatus === "API_ERROR" || data.govStatus === "TIMEOUT") {
-                    status.innerHTML = "<span style='color:var(--danger)'>❌ אתר הממשלה לא מגיב. נא למלא ידנית.</span>";
-                } else {
-                    status.innerHTML = "<span style='color:var(--danger)'>⚠️ חובה למלא יצרן ודגם לניתוח.</span>";
-                }
-            } else {
-                status.innerHTML = "<span style='color:var(--danger)'>❌ שגיאת שרת כללית.</span>";
-            }
+            if (data.error === "NOT_FOUND") status.innerHTML = "<span style='color:var(--warning)'>⚠️ הרכב לא נמצא במאגר. מלא ידנית.</span>";
+            else status.innerHTML = "<span style='color:var(--danger)'>❌ שגיאת תקשורת לממשלה. מלא ידנית.</span>";
         }
-
     } catch (e) {
-        console.error(e);
-        status.innerHTML = "<span style='color:var(--danger)'>⚠️ שגיאת רשת. נסה שוב.</span>";
+        status.innerHTML = "<span style='color:var(--danger)'>❌ שגיאה בחיבור לשרת</span>";
     } finally {
-        overlay.style.display = "none";
+        hideLoading();
     }
 }
 
-function startInspection() {
-    // בדיקה שיש שם רכב
-    if (!document.getElementById('brand').value) { 
-        alert("נא למלא פרטי רכב או ללחוץ על 'נתח רכב' קודם!"); 
-        return; 
+// פונקציה 2: רק AI
+async function analyzeAI() {
+    const brand = document.getElementById('brand').value;
+    const model = document.getElementById('model').value;
+    const year = document.getElementById('year').value;
+    const aiCard = document.getElementById('ai-card');
+
+    if(!brand || !model) {
+        alert("חובה למלא יצרן ודגם (או לאתר לפי לוחית) לפני הפעלת ה-AI");
+        return;
     }
-    
-    // מעבר מסך
+
+    showLoading("ה-AI מנתח נתונים...");
+    aiCard.style.display = "none";
+
+    try {
+        const res = await fetch('/analyze-ai', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ brand, model, year })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            aiCard.style.display = "block";
+            // פירמוט יפה לטקסט
+            document.getElementById('ai-text').innerHTML = data.aiAnalysis
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--primary)">$1</strong>')
+                .replace(/\*/g, '•');
+        } else {
+            alert("שגיאה בניתוח AI. נסה שוב.");
+        }
+    } catch (e) {
+        alert("שגיאת תקשורת.");
+    } finally {
+        hideLoading();
+    }
+}
+
+function goToInspection() {
+    if(!document.getElementById('brand').value) {
+        alert("מלא פרטי רכב קודם.");
+        return;
+    }
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     
-    // מילוי כותרות
-    const fullName = document.getElementById('brand').value + " " + document.getElementById('model').value;
-    document.getElementById('display-name').innerText = fullName;
-    document.getElementById('display-plate').innerText = document.getElementById('plate').value || "ללא מספר";
+    document.getElementById('display-name').innerText = 
+        document.getElementById('brand').value + " " + document.getElementById('model').value;
 
-    // --- החידוש: העברת הניתוח של ה-AI למסך הבדיקה ---
-    const aiContent = document.getElementById('ai-text').innerHTML;
-    const aiSection = document.getElementById('checklist-ai-summary');
-    
-    // אם יש מקום בדף להציג את זה, נעדכן אותו (נצטרך להוסיף את ה-DIV הזה ב-HTML למטה)
-    if (aiContent && aiContent.length > 10) {
-        // יצירת אלמנט דינמי אם לא קיים
-        let summaryDiv = document.getElementById('checklist-ai-box');
-        if (!summaryDiv) {
-            summaryDiv = document.createElement('div');
-            summaryDiv.id = 'checklist-ai-box';
-            summaryDiv.style.background = "rgba(0, 242, 255, 0.1)";
-            summaryDiv.style.border = "1px solid var(--primary)";
-            summaryDiv.style.borderRadius = "12px";
-            summaryDiv.style.padding = "15px";
-            summaryDiv.style.marginBottom = "20px";
-            summaryDiv.style.fontSize = "14px";
-            summaryDiv.innerHTML = `<strong style="color:var(--primary)">⚠️ דגשים לבדיקה (מה-AI):</strong><div style="margin-top:5px; color:#ddd">${aiContent}</div>`;
-            
-            // הוספה לפני רשימת הבדיקה
-            const listContent = document.getElementById('list-content');
-            listContent.parentNode.insertBefore(summaryDiv, listContent);
-        } else {
-            summaryDiv.innerHTML = `<strong style="color:var(--primary)">⚠️ דגשים לבדיקה (מה-AI):</strong><div style="margin-top:5px; color:#ddd">${aiContent}</div>`;
-        }
+    // העתקת ה-AI למסך הבדיקה
+    const aiText = document.getElementById('ai-text').innerHTML;
+    if(aiText) {
+        document.getElementById('checklist-ai-container').innerHTML = 
+            `<div style="background:rgba(0,242,255,0.1); border:1px solid var(--primary); padding:15px; border-radius:12px; margin-bottom:20px;">
+                <strong>⚠️ סיכום AI:</strong><br>${aiText}
+             </div>`;
     }
-    // ---------------------------------------------------
 
-    // יצירת הצ'ק ליסט הרגיל...
-    const categories = [
-        { name: "מנוע", items: ["נזילות שמן", "מפלס מים", "רעש מנוע", "רצועות", "עשן"] },
-        { name: "גיר", items: ["העברת הילוכים", "מכות בגיר", "ציריות", "רעידות"] },
-        { name: "שלדה", items: ["תאונות/תיקוני צבע", "קורה קדמית", "קורה אחורית", "חלודה"] },
-        { name: "חשמל ופנים", items: ["מזגן", "חלונות", "נורות אזהרה", "צמיגים"] }
-    ];
-
-    let html = "";
-    categories.forEach(cat => {
-        html += `<div class="category"><div class="cat-header">${cat.name}</div>`;
-        cat.items.forEach(item => {
-            html += `<div class="check-item" onclick="this.querySelector('.cb').classList.toggle('checked')">
-                        <div class="cb"></div><span>${item}</span>
-                     </div>`;
-        });
-        html += `</div>`;
-    });
-    document.getElementById('list-content').innerHTML = html;
-    window.scrollTo(0,0);
-}
-function shareToWhatsApp() {
-    const name = document.getElementById('display-name').innerText;
-    const aiText = document.getElementById('ai-text').innerText;
-    const text = `*דוח בדיקת רכב - CarCheck AI* 🚗%0A*רכב:* ${name}%0A----------------%0A*סיכום AI:*%0A${aiText}%0A----------------%0Aנבדק באפליקציה.`;
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-}
-</script>
-</body>
-</html>
+    // בניית הצ'ק ליסט
+    const items = {
+        "מנוע": ["נזילות שמן", "מפלס מים", "רעש מנוע", "עשן"],
+        "גיר": ["העברת הילוכים", "מכות בגיר", "רעידות"],
+        "שלדה": ["
