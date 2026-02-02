@@ -63,7 +63,14 @@
         <div id="status" class="status"></div>
         
         <button id="search-btn" class="btn-main" onclick="fetchFromRender()">זהה רכב במאגר 🔍</button>
-        
+                <div id="ai-card" style="display:none; background: linear-gradient(145deg, #1e1e26, #16161d); border: 1px solid var(--primary); border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 242, 255, 0.15);">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 24px; margin-left: 10px;">🤖</span>
+                <h3 style="color: var(--primary); margin: 0; font-size: 18px;">ניתוח תקלות AI ממוקד</h3>
+            </div>
+            <div id="ai-text" style="color: #e0e0e0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;"></div>
+        </div>
+                
         <div style="margin-top: 35px;">
             <input id="brand" class="ios-field" placeholder="יצרן">
             <input id="model" class="ios-field" placeholder="דגם">
