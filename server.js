@@ -8,9 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// בדיקה שהמפתח קיים ב-Render
+// בדיקת מפתח
 if (!process.env.GEMINI_API_KEY) {
-    console.error("❌ ERROR: GEMINI_API_KEY is missing in Render Environment Variables!");
+    console.error("❌ CRITICAL: GEMINI_API_KEY is missing!");
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -19,81 +19,82 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// פונקציית עזר חכמה שמנסה מספר מודלים
-async function getAIResponse(prompt) {
-    const modelsToTry = ["gemini-1.5-flash", "gemini-pro"]; // סדר עדיפויות
+// --- נתיב 1: רק משיכת פרטים ממשרד התחבורה ---
+app.post('/get-car-details', async (req, res) => {
+    const { plate } = req.body;
     
-    for (const modelName of modelsToTry) {
-        try {
-            console.log(`Trying model: ${modelName}...`);
-            const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent(prompt);
-            const text = result.response.text();
-            if (text) return text;
-        } catch (error) {
-            console.warn(`⚠️ Model ${modelName} failed:`, error.message);
-            // ממשיכים למודל הבא בלולאה
-        }
+    if (!plate || plate.length < 7) {
+        return res.json({ success: false, error: "מספר לוחית לא תקין" });
     }
-    throw new Error("All AI models failed to respond.");
-}
-
-app.post('/analyze-car', async (req, res) => {
-    let { plate, brand, model, year } = req.body;
-    let govStatus = "SKIPPED";
 
     try {
-        // 1. משרד התחבורה
-        if (plate && plate.length >= 7) {
-            try {
-                const govUrl = "https://data.gov.il/api/3/action/datastore_search";
-                const response = await axios.get(govUrl, {
-                    params: {
-                        resource_id: "053ad243-5e8b-4334-8397-47883b740881",
-                        filters: JSON.stringify({ mispar_rechev: plate.toString().trim() })
-                    },
-                    timeout: 5000
-                });
+        console.log(`Searching Gov DB for: ${plate}`);
+        const govUrl = "https://data.gov.il/api/3/action/datastore_search";
+        const response = await axios.get(govUrl, {
+            params: {
+                resource_id: "053ad243-5e8b-4334-8397-47883b740881",
+                filters: JSON.stringify({ mispar_rechev: plate.toString().trim() })
+            },
+            timeout: 5000
+        });
 
-                if (response.data.success && response.data.result.records.length > 0) {
-                    const car = response.data.result.records[0];
-                    brand = car.tozeret_nm.trim();
-                    model = car.kinuy_mishari.trim();
-                    year = car.shnat_yitzur;
-                    govStatus = "SUCCESS";
-                } else {
-                    govStatus = "NOT_FOUND";
+        if (response.data.success && response.data.result.records.length > 0) {
+            const car = response.data.result.records[0];
+            return res.json({
+                success: true,
+                data: {
+                    brand: car.tozeret_nm.trim(),
+                    model: car.kinuy_mishari.trim(),
+                    year: car.shnat_yitzur
                 }
-            } catch (err) {
-                console.log("Gov API Error:", err.message);
-                govStatus = "API_ERROR";
+            });
+        } else {
+            return res.json({ success: false, error: "NOT_FOUND" });
+        }
+    } catch (err) {
+        console.error("Gov API Error:", err.message);
+        return res.json({ success: false, error: "API_ERROR" });
+    }
+});
+
+// --- נתיב 2: רק ניתוח AI (מקבל יצרן, דגם, שנה) ---
+app.post('/analyze-ai', async (req, res) => {
+    const { brand, model, year } = req.body;
+
+    if (!brand || !model) {
+        return res.json({ success: false, error: "חסרים פרטי רכב" });
+    }
+
+    try {
+        // מנגנון חכם למציאת מודל עובד (v1)
+        const modelsToTry = ["gemini-1.5-flash", "gemini-pro", "gemini-1.0-pro"];
+        let aiText = null;
+
+        for (const modelName of modelsToTry) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName, apiVersion: "v1" });
+                const prompt = `רכב: ${brand} ${model} שנת ${year}.
+                תן סיכום קצר וקולע בעברית:
+                1. ציון אמינות (⭐).
+                2. 3 תקלות נפוצות ("מחלות דגם").
+                תהיה מקצועי.`;
+                
+                const result = await model.generateContent(prompt);
+                aiText = result.response.text();
+                if (aiText) break; // הצלחנו!
+            } catch (e) {
+                console.warn(`Model ${modelName} failed, trying next...`);
             }
         }
 
-        // 2. וידוא שיש נתונים לפני AI
-        if (!brand || !model) {
-            return res.json({ success: false, error: "MISSING_DETAILS", govStatus });
+        if (aiText) {
+            res.json({ success: true, aiAnalysis: aiText });
+        } else {
+            res.status(500).json({ success: false, error: "AI_FAILED" });
         }
 
-        // 3. הפעלת ה-AI עם המנגנון החכם
-        const prompt = `אתה בוחן רכב מקצועי.
-        רכב: ${brand} ${model} שנת ${year}.
-        כתוב סיכום קצר (עד 4 שורות) בעברית:
-        1. ציון אמינות (⭐).
-        2. "מחלות דגם" ידועות שחובה לבדוק (כמו גיר, מנוע, חשמל).
-        תמקד את הבוחן למה לשים לב בבדיקה פיזית.`;
-
-        const aiText = await getAIResponse(prompt);
-
-        res.json({
-            success: true,
-            govStatus,
-            aiAnalysis: aiText,
-            detectedInfo: { brand, model, year }
-        });
-
     } catch (error) {
-        console.error("CRITICAL SERVER ERROR:", error);
+        console.error("Server Error:", error);
         res.status(500).json({ success: false, error: "SERVER_ERROR" });
     }
 });
