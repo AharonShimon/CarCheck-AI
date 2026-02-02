@@ -5,86 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CarCheck AI Pro</title>
     <style>
-        :root { --primary: #00F2FF; --accent: #7000FF; --bg: #0A0A0C; --card: #16161D; --text: #FFFFFF; --danger: #FF3B3B; --success: #00FF85; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; direction: rtl; }
-        .container { padding: 20px; max-width: 500px; margin: auto; }
+        :root { --primary: #00F2FF; --accent: #7000FF; --bg: #0A0A0C; --card: #16161D; --text: #E0E0E0; --danger: #FF3B3B; --success: #00FF85; --warning: #FFB800; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); margin: 0; direction: rtl; }
+        .container { padding: 20px; max-width: 500px; margin: auto; padding-bottom: 50px; }
         
-        /* עיצוב לוחית רישוי */
-        .plate-container { background: #FFB800; padding: 12px; border-radius: 12px; border: 4px solid #000; margin-bottom: 20px; display: flex; align-items: center; position: relative; }
-        .plate-input { background: none; border: none; font-size: 35px; font-weight: 900; width: 100%; text-align: center; outline: none; color: #000; letter-spacing: 2px; }
-        .il-tag { background: #003399; color: white; padding: 5px; border-radius: 4px; font-size: 10px; position: absolute; left: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center;}
+        h1 { text-align:center; margin-top: 10px; margin-bottom: 20px; font-size: 28px; }
 
-        .ios-field { width: 100%; padding: 15px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 12px; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
-        .btn-main { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; transition: 0.3s; }
+        .plate-container { background: #FFB800; padding: 8px; border-radius: 12px; border: 3px solid #000; margin-bottom: 20px; display: flex; align-items: center; position: relative; box-shadow: 0 4px 15px rgba(255, 184, 0, 0.2); }
+        .plate-input { background: none; border: none; font-size: 40px; font-weight: 900; width: 100%; text-align: center; outline: none; color: #000; letter-spacing: 4px; font-family: monospace; }
+        .il-tag { background: #003399; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; position: absolute; left: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+
+        .ios-field { width: 100%; padding: 15px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 12px; box-sizing: border-box; font-size: 17px; transition: 0.3s; }
+        .ios-field:focus { border-color: var(--primary); outline: none; }
         
-        #ai-card { display: none; background: rgba(0, 242, 255, 0.05); border: 1px solid var(--primary); border-radius: 18px; padding: 20px; margin: 20px 0; animation: fadeIn 0.5s; }
-        #ai-text { white-space: pre-wrap; line-height: 1.6; font-size: 15px; }
+        .btn-main { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 16px; border-radius: 16px; font-size: 18px; font-weight: 700; width: 100%; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 20px rgba(0, 242, 255, 0.25); }
+        .btn-main:active { transform: scale(0.98); }
 
-        .category { margin-top: 30px; }
-        .cat-header { color: var(--primary); font-size: 19px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 12px; }
-        .check-item { background: var(--card); padding: 16px; border-radius: 14px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
-        .cb { width: 24px; height: 24px; border: 2px solid #444; border-radius: 8px; margin-left: 15px; }
-        .cb.checked { background: var(--danger); border-color: var(--danger); display: flex; align-items: center; justify-content: center; }
-        .cb.checked::after { content: "✕"; color: white; font-size: 14px; }
-
-        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        #ai-card { display: none; background: rgba(22, 22, 29, 0.95); border: 1px solid rgba(0, 242, 255, 0.3); border-radius: 18px; padding: 20px; margin: 25px 0; animation: fadeIn 0.6s; }
+        #ai-text { white-space: pre-wrap; line-height: 1.6; font-size: 15px; color: #ddd; }
+        
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .spinner { width: 50px; height: 50px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* סגנונות לצ'ק ליסט */
+        .category { margin-top: 30px; }
+        .cat-header { color: var(--primary); font-size: 19px; font-weight: 800; border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 12px; }
+        .check-item { background: var(--card); padding: 15px; border-radius: 14px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
+        .cb { width: 24px; height: 24px; border: 2px solid #555; border-radius: 8px; margin-left: 15px; }
+        .cb.checked { background: var(--danger); border-color: var(--danger); display: flex; align-items: center; justify-content: center; }
+        .cb.checked::after { content: "✕"; color: white; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <p style="color: var(--primary); margin-top: 15px;">ה-AI מנתח נתונים...</p>
+    <p style="color: var(--primary); margin-top: 20px; font-weight: bold;">מבצע בדיקה מקיפה...</p>
 </div>
 
 <div id="screen-input" class="container">
-    <h1 style="text-align:center">CarCheck <span style="color:var(--primary)">AI PRO</span></h1>
+    <h1>CarCheck <span style="color:var(--primary)">AI PRO</span></h1>
     
     <div class="plate-container">
         <div class="il-tag"><span>IL</span><span>ישראל</span></div>
-        <input id="plate" class="plate-input" type="tel" placeholder="מספר רכב" maxlength="8">
+        <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8" inputmode="numeric">
     </div>
 
-    <div id="status" style="text-align: center; margin-bottom: 15px;"></div>
+    <div id="status" style="text-align: center; margin-bottom: 15px; min-height: 25px; font-weight:bold;"></div>
     
-    <button class="btn-main" onclick="fetchFromRender()">נתח רכב עם AI 🤖</button>
+    <button class="btn-main" onclick="analyzeCar()">🔍 נתח רכב (AI)</button>
 
     <div id="ai-card">
-        <strong style="color:var(--primary); font-size: 17px;">🤖 ניתוח תקלות ואמינות:</strong>
-        <div id="ai-text" style="margin-top: 10px;"></div>
+        <div style="display:flex; align-items:center; margin-bottom:10px;">
+            <span style="font-size:24px; margin-left:10px;">🤖</span>
+            <strong style="color:var(--primary); font-size: 18px;">דוח אמינות AI</strong>
+        </div>
+        <div id="ai-text"></div>
     </div>
 
-    <div style="margin-top: 25px;">
-        <input id="brand" class="ios-field" placeholder="יצרן">
-        <input id="model" class="ios-field" placeholder="דגם">
-        <input id="year" class="ios-field" placeholder="שנה">
+    <div style="margin-top: 30px;">
+        <p style="margin-bottom:10px; font-size:14px; color:#888;">פרטי הרכב (יתמלאו אוטומטית או מלא ידנית):</p>
+        <input id="brand" class="ios-field" placeholder="יצרן (למשל: יונדאי)">
+        <input id="model" class="ios-field" placeholder="דגם (למשל: איוניק)">
+        <input id="year" class="ios-field" type="number" placeholder="שנה" inputmode="numeric">
     </div>
 
-    <button class="btn-main" style="background: #222;" onclick="startInspection()">המשך לבדיקת 40 נקודות ➔</button>
+    <button class="btn-main" style="background: #222; margin-top: 20px; border: 1px solid #333;" onclick="startInspection()">המשך לצ'ק-ליסט בדיקה ➔</button>
 </div>
 
 <div id="screen-check" class="container" style="display:none">
-    <h2 id="display-name" style="text-align:center; margin-bottom:5px"></h2>
-    <p id="display-plate" style="text-align:center; color:var(--primary); margin-top:0"></p>
+    <h2 id="display-name" style="text-align:center; color:white;"></h2>
+    <div class="plate-container" style="padding: 5px; margin: 0 auto 20px auto; width: fit-content;">
+        <span id="display-plate" style="font-size: 20px; font-weight: bold; color: black; letter-spacing: 2px;"></span>
+    </div>
     <div id="list-content"></div>
-    <button class="btn-main" style="margin-top:20px" onclick="window.print()">שמור דוח PDF 📄</button>
-    <button class="btn-main" style="background:#25D366; margin-top:10px" onclick="shareToWhatsApp()">שתף בוואטסאפ 🟢</button>
+    <div style="margin-top: 40px;">
+        <button class="btn-main" style="background:#25D366; margin-bottom:15px;" onclick="shareToWhatsApp()">שתף בוואטסאפ 🟢</button>
+        <button class="btn-main" style="background: transparent; color: #888; font-size:14px;" onclick="location.reload()">התחל מחדש ↺</button>
+    </div>
 </div>
 
 <script>
-async function fetchFromRender() {
+function formatText(text) {
+    if (!text) return "";
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*/g, '•');
+}
+
+async function analyzeCar() {
     const plate = document.getElementById('plate').value;
     const brandField = document.getElementById('brand');
     const modelField = document.getElementById('model');
     const yearField = document.getElementById('year');
+    
     const overlay = document.getElementById('loading-overlay');
     const status = document.getElementById('status');
+    const aiCard = document.getElementById('ai-card');
 
-    overlay.style.display = "flex";
     status.innerHTML = "";
+    aiCard.style.display = "none";
+    overlay.style.display = "flex";
 
     try {
         const response = await fetch('/analyze-car', {
@@ -97,54 +118,94 @@ async function fetchFromRender() {
                 year: yearField.value 
             })
         });
+
         const data = await response.json();
 
-        if (data.aiAnalysis) {
+        if (data.success) {
+            // 1. מילוי שדות אוטומטי אם הגיע מידע מהממשלה
             if (data.detectedInfo) {
-                brandField.value = data.detectedInfo.brand || brandField.value;
-                modelField.value = data.detectedInfo.model || modelField.value;
-                yearField.value = data.detectedInfo.year || yearField.value;
+                if(data.detectedInfo.brand) brandField.value = data.detectedInfo.brand;
+                if(data.detectedInfo.model) modelField.value = data.detectedInfo.model;
+                if(data.detectedInfo.year) yearField.value = data.detectedInfo.year;
             }
-            document.getElementById('ai-card').style.display = "block";
-            document.getElementById('ai-text').innerText = data.aiAnalysis;
-            status.innerHTML = "<span style='color:var(--success)'>✅ ניתוח הושלם</span>";
+
+            // 2. הצגת הודעה לפי הסטטוס הממשלתי
+            if (data.govStatus === "SUCCESS") {
+                status.innerHTML = "<span style='color:var(--success)'>✅ רכב זוהה במשרד התחבורה!</span>";
+            } else if (data.govStatus === "NOT_FOUND") {
+                status.innerHTML = "<span style='color:var(--warning)'>⚠️ הרכב לא נמצא במאגר, אך בוצע ניתוח ידני.</span>";
+            } else if (data.govStatus === "API_ERROR" || data.govStatus === "TIMEOUT") {
+                status.innerHTML = "<span style='color:var(--warning)'>⚠️ שגיאת תקשורת לממשלה - בוצע ניתוח ידני.</span>";
+            } else {
+                status.innerHTML = "<span style='color:var(--success)'>✅ ניתוח AI בוצע בהצלחה.</span>";
+            }
+
+            // 3. הצגת הניתוח
+            aiCard.style.display = "block";
+            document.getElementById('ai-text').innerHTML = formatText(data.aiAnalysis);
+
+        } else {
+            // ניהול שגיאות (כאשר אין פרטים בכלל)
+            if (data.error === "MISSING_DETAILS") {
+                if (data.govStatus === "NOT_FOUND") {
+                    status.innerHTML = "<span style='color:var(--warning)'>⚠️ הרכב לא קיים במאגר. נא למלא יצרן ודגם ידנית.</span>";
+                } else if (data.govStatus === "API_ERROR" || data.govStatus === "TIMEOUT") {
+                    status.innerHTML = "<span style='color:var(--danger)'>❌ אתר הממשלה לא מגיב. נא למלא ידנית.</span>";
+                } else {
+                    status.innerHTML = "<span style='color:var(--danger)'>⚠️ חובה למלא יצרן ודגם לניתוח.</span>";
+                }
+            } else {
+                status.innerHTML = "<span style='color:var(--danger)'>❌ שגיאת שרת כללית.</span>";
+            }
         }
+
     } catch (e) {
-        status.innerHTML = "<span style='color:var(--danger)'>⚠️ שגיאה בחיבור לשרת</span>";
+        console.error(e);
+        status.innerHTML = "<span style='color:var(--danger)'>⚠️ שגיאת רשת. נסה שוב.</span>";
     } finally {
         overlay.style.display = "none";
     }
 }
 
 function startInspection() {
-    if (!document.getElementById('brand').value) { alert("זהה רכב קודם!"); return; }
+    if (!document.getElementById('brand').value) { 
+        alert("נא למלא פרטי רכב (או לבצע ניתוח AI) לפני המעבר לבדיקה"); 
+        return; 
+    }
+    
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
-    document.getElementById('display-name').innerText = document.getElementById('brand').value + " " + document.getElementById('model').value;
-    document.getElementById('display-plate').innerText = document.getElementById('plate').value || "בדיקה ידנית";
+    
+    document.getElementById('display-name').innerText = 
+        document.getElementById('brand').value + " " + document.getElementById('model').value;
+    document.getElementById('display-plate').innerText = 
+        document.getElementById('plate').value || "ללא מספר";
 
     const categories = [
-        { name: "מנוע", items: ["נזילות שמן", "מפלס נוזל קירור", "רעשים", "תושבות", "מצבר", "עשן אגזוז"] },
-        { name: "גיר", items: ["החלקה", "נקישות", "ציריות", "גומיות הגנה"] },
-        { name: "שלדה", items: ["תיקוני צבע", "מכות שלדה", "ריתוכים", "פגושים", "שמשות"] },
-        { name: "בטיחות", items: ["צמיגים", "בלמים", "חופש הגה", "חגורות", "נורות אזהרה"] }
+        { name: "מנוע ונוזלים", items: ["נזילות שמן", "מפלס מים (נוזל קירור)", "רעש מנוע", "מצבר (תאריך)", "עשן (לבן/שחור)"] },
+        { name: "גיר והנעה", items: ["העברת הילוכים", "מכות בגיר", "ציריות וגומיות", "רעשים בנסיעה"] },
+        { name: "שלדה ומרכב", items: ["תיקוני צבע/פחחות", "רווחים בדלתות", "קורות שלדה", "פנסים ושמשות"] },
+        { name: "פנים ובטיחות", items: ["מזגן (קור/חום)", "חלונות חשמל", "נורות אזהרה", "צמיגים (יובש/שחיקה)"] }
     ];
 
     let html = "";
     categories.forEach(cat => {
         html += `<div class="category"><div class="cat-header">${cat.name}</div>`;
         cat.items.forEach(item => {
-            html += `<div class="check-item" onclick="this.querySelector('.cb').classList.toggle('checked')"><div class="cb"></div><span>${item}</span></div>`;
+            html += `<div class="check-item" onclick="this.querySelector('.cb').classList.toggle('checked')">
+                        <div class="cb"></div><span>${item}</span>
+                     </div>`;
         });
         html += `</div>`;
     });
     document.getElementById('list-content').innerHTML = html;
+    window.scrollTo(0,0);
 }
 
 function shareToWhatsApp() {
     const name = document.getElementById('display-name').innerText;
-    const ai = document.getElementById('ai-text').innerText;
-    const text = `*דוח בדיקת רכב AI*%0A*רכב:* ${name}%0A%0A*ניתוח AI:*%0A${ai}`;
+    const aiText = document.getElementById('ai-text').innerText;
+    const text = `*דוח בדיקת רכב - CarCheck AI* 🚗%0A*רכב:* ${name}%0A----------------%0A*סיכום AI:*%0A${aiText}%0A----------------%0Aנבדק באפליקציה.`;
     window.open(`https://wa.me/?text=${text}`, '_blank');
 }
 </script>
