@@ -8,9 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// בדיקה שהמפתח קיים
-console.log("Checking API Key:", process.env.GEMINI_API_KEY ? "EXISTS ✅" : "MISSING ❌");
-
+// אתחול ה-AI (ודא שיש לך GEMINI_API_KEY ב-Render)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.get('/', (req, res) => {
@@ -18,13 +16,13 @@ app.get('/', (req, res) => {
 });
 
 app.post('/analyze-car', async (req, res) => {
-    console.log("1. Request received!", req.body); // בדיקה שהבקשה הגיעה
     let { plate, brand, model, year } = req.body;
+    let govStatus = "SKIPPED"; // ברירת מחדל: לא בוצע חיפוש ממשלתי
 
     try {
-        // --- בדיקת משרד התחבורה ---
+        // --- שלב 1: בדיקת משרד התחבורה (אם הוזנה לוחית) ---
         if (plate && plate.length >= 7) {
-            console.log("2. Starting Gov API check for plate:", plate);
+            console.log(`Searching Gov DB for: ${plate}`);
             try {
                 const govUrl = "https://data.gov.il/api/3/action/datastore_search";
                 const response = await axios.get(govUrl, {
@@ -32,53 +30,62 @@ app.post('/analyze-car', async (req, res) => {
                         resource_id: "053ad243-5e8b-4334-8397-47883b740881",
                         filters: JSON.stringify({ mispar_rechev: plate.toString().trim() })
                     },
-                    timeout: 4000 // טיימאאוט קצר
+                    timeout: 6000 // מחכה לממשלה עד 6 שניות
                 });
 
-                if (response.data.success && response.data.result.records.length > 0) {
-                    console.log("3. Gov API found car!");
-                    const car = response.data.result.records[0];
-                    brand = car.tozeret_nm.trim();
-                    model = car.kinuy_mishari.trim();
-                    year = car.shnat_yitzur;
-                } else {
-                    console.log("3. Gov API returned no records.");
+                if (response.data.success) {
+                    if (response.data.result.records.length > 0) {
+                        // נמצא רכב! דורסים את המשתנים בנתונים המדויקים
+                        const car = response.data.result.records[0];
+                        brand = car.tozeret_nm.trim();
+                        model = car.kinuy_mishari.trim();
+                        year = car.shnat_yitzur;
+                        govStatus = "SUCCESS";
+                    } else {
+                        govStatus = "NOT_FOUND"; // החיבור הצליח, המספר לא קיים
+                    }
                 }
             } catch (err) {
-                console.log("3. Gov API FAILED (Common in cloud servers):", err.message);
+                console.log("Gov API Error:", err.message);
+                // אבחנה בין נפילת שרת לבין סתם שגיאה
+                if (err.code === 'ECONNABORTED') govStatus = "TIMEOUT";
+                else govStatus = "API_ERROR";
             }
         }
 
-        // --- בדיקה לפני AI ---
-        console.log("4. Data for AI:", { brand, model, year });
-        
+        // --- שלב 2: בדיקת תקינות לפני AI ---
+        // אם בסוף שלב 1 אין לנו יצרן ודגם (לא מהמשתמש ולא מהממשלה) -> מחזירים שגיאה ללקוח
         if (!brand || !model) {
-            console.log("ERROR: Missing brand/model, stopping.");
-            return res.status(400).json({ error: "לא זוהה רכב. נא להקליד יצרן ודגם ידנית." });
+            return res.json({ 
+                success: false,
+                error: "MISSING_DETAILS", 
+                govStatus: govStatus 
+            });
         }
 
-        // --- בדיקת AI ---
-        console.log("5. Calling Gemini AI...");
+        // --- שלב 3: הפעלת Gemini AI ---
         const aiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
-        
-        const prompt = `נתח בקצרה אמינות לרכב: ${brand} ${model} שנת ${year}. תן ציון כוכבים ו-3 תקלות נפוצות.`;
-        
+        const prompt = `אתה מומחה רכב. נתח את האמינות של: ${brand} ${model} שנת ${year}.
+        1. תן ציון אמינות (1-5 כוכבים).
+        2. פרט 3 תקלות נפוצות בישראל ("מחלות ילדות").
+        3. כתוב קצר, מקצועי ובעברית בלבד.`;
+
         const result = await aiModel.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        
-        console.log("6. AI Responded success!");
-        
+        const aiText = result.response.text();
+
+        // החזרת תשובה מלאה
         res.json({
-            aiAnalysis: text,
+            success: true,
+            govStatus: govStatus,
+            aiAnalysis: aiText,
             detectedInfo: { brand, model, year }
         });
 
     } catch (error) {
-        console.error("CRITICAL ERROR:", error);
-        res.status(500).json({ error: "שגיאה פנימית בשרת: " + error.message });
+        console.error("Critical Server Error:", error);
+        res.status(500).json({ success: false, error: "SERVER_ERROR" });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Debug Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server LIVE on port ${PORT}`));
