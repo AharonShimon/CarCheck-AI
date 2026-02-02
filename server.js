@@ -8,7 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// אתחול ה-AI עם המפתח מהגדרות השרת
+// בדיקה שהמפתח קיים
+console.log("Checking API Key:", process.env.GEMINI_API_KEY ? "EXISTS ✅" : "MISSING ❌");
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.get('/', (req, res) => {
@@ -16,11 +18,13 @@ app.get('/', (req, res) => {
 });
 
 app.post('/analyze-car', async (req, res) => {
+    console.log("1. Request received!", req.body); // בדיקה שהבקשה הגיעה
     let { plate, brand, model, year } = req.body;
 
     try {
-        // 1. ניסיון משיכת נתונים ממשרד התחבורה
-        if (plate && plate.length >= 7 && (!brand || brand === "")) {
+        // --- בדיקת משרד התחבורה ---
+        if (plate && plate.length >= 7) {
+            console.log("2. Starting Gov API check for plate:", plate);
             try {
                 const govUrl = "https://data.gov.il/api/3/action/datastore_search";
                 const response = await axios.get(govUrl, {
@@ -28,52 +32,53 @@ app.post('/analyze-car', async (req, res) => {
                         resource_id: "053ad243-5e8b-4334-8397-47883b740881",
                         filters: JSON.stringify({ mispar_rechev: plate.toString().trim() })
                     },
-                    timeout: 5000 // מחכה מקסימום 5 שניות לממשלה
+                    timeout: 4000 // טיימאאוט קצר
                 });
 
                 if (response.data.success && response.data.result.records.length > 0) {
+                    console.log("3. Gov API found car!");
                     const car = response.data.result.records[0];
                     brand = car.tozeret_nm.trim();
                     model = car.kinuy_mishari.trim();
                     year = car.shnat_yitzur;
+                } else {
+                    console.log("3. Gov API returned no records.");
                 }
             } catch (err) {
-                console.log("Gov API logic skipped or failed:", err.message);
-                // ממשיכים הלאה, אולי המשתמש הקליד ידנית
+                console.log("3. Gov API FAILED (Common in cloud servers):", err.message);
             }
         }
 
-        // 2. בדיקה שיש לנו מספיק מידע ל-AI
-        if (!brand || brand === "") {
-            return res.status(400).json({ error: "לא נמצאו פרטי רכב. נא להזין דגם ידנית." });
+        // --- בדיקה לפני AI ---
+        console.log("4. Data for AI:", { brand, model, year });
+        
+        if (!brand || !model) {
+            console.log("ERROR: Missing brand/model, stopping.");
+            return res.status(400).json({ error: "לא זוהה רכב. נא להקליד יצרן ודגם ידנית." });
         }
 
-        // 3. הפעלת ה-AI (שימוש במודל היציב ביותר)
-        const modelAI = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // --- בדיקת AI ---
+        console.log("5. Calling Gemini AI...");
+        const aiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
         
-        const prompt = `נתח את האמינות של הרכב הבא: ${brand} ${model} שנת ${year}. 
-        כתוב בעברית:
-        1. ציון אמינות (1-5 כוכבים).
-        2. שלוש תקלות נפוצות המוכרות במוסכים בישראל.
-        היה קצר וענייני.`;
-
-        const result = await modelAI.generateContent(prompt);
-        const responseAI = await result.response;
-        const text = responseAI.text();
-
-        // 4. החזרת תשובה מסודרת לאתר
+        const prompt = `נתח בקצרה אמינות לרכב: ${brand} ${model} שנת ${year}. תן ציון כוכבים ו-3 תקלות נפוצות.`;
+        
+        const result = await aiModel.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        
+        console.log("6. AI Responded success!");
+        
         res.json({
             aiAnalysis: text,
             detectedInfo: { brand, model, year }
         });
 
     } catch (error) {
-        console.error("Critical Server Error:", error);
-        res.status(500).json({ error: "שגיאה בתהליך הניתוח. ודא שמפתח ה-API תקין." });
+        console.error("CRITICAL ERROR:", error);
+        res.status(500).json({ error: "שגיאה פנימית בשרת: " + error.message });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`Server is running perfectly on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Debug Server running on port ${PORT}`));
