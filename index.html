@@ -168,24 +168,55 @@ async function analyzeCar() {
 }
 
 function startInspection() {
+    // בדיקה שיש שם רכב
     if (!document.getElementById('brand').value) { 
-        alert("נא למלא פרטי רכב (או לבצע ניתוח AI) לפני המעבר לבדיקה"); 
+        alert("נא למלא פרטי רכב או ללחוץ על 'נתח רכב' קודם!"); 
         return; 
     }
     
+    // מעבר מסך
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     
-    document.getElementById('display-name').innerText = 
-        document.getElementById('brand').value + " " + document.getElementById('model').value;
-    document.getElementById('display-plate').innerText = 
-        document.getElementById('plate').value || "ללא מספר";
+    // מילוי כותרות
+    const fullName = document.getElementById('brand').value + " " + document.getElementById('model').value;
+    document.getElementById('display-name').innerText = fullName;
+    document.getElementById('display-plate').innerText = document.getElementById('plate').value || "ללא מספר";
 
+    // --- החידוש: העברת הניתוח של ה-AI למסך הבדיקה ---
+    const aiContent = document.getElementById('ai-text').innerHTML;
+    const aiSection = document.getElementById('checklist-ai-summary');
+    
+    // אם יש מקום בדף להציג את זה, נעדכן אותו (נצטרך להוסיף את ה-DIV הזה ב-HTML למטה)
+    if (aiContent && aiContent.length > 10) {
+        // יצירת אלמנט דינמי אם לא קיים
+        let summaryDiv = document.getElementById('checklist-ai-box');
+        if (!summaryDiv) {
+            summaryDiv = document.createElement('div');
+            summaryDiv.id = 'checklist-ai-box';
+            summaryDiv.style.background = "rgba(0, 242, 255, 0.1)";
+            summaryDiv.style.border = "1px solid var(--primary)";
+            summaryDiv.style.borderRadius = "12px";
+            summaryDiv.style.padding = "15px";
+            summaryDiv.style.marginBottom = "20px";
+            summaryDiv.style.fontSize = "14px";
+            summaryDiv.innerHTML = `<strong style="color:var(--primary)">⚠️ דגשים לבדיקה (מה-AI):</strong><div style="margin-top:5px; color:#ddd">${aiContent}</div>`;
+            
+            // הוספה לפני רשימת הבדיקה
+            const listContent = document.getElementById('list-content');
+            listContent.parentNode.insertBefore(summaryDiv, listContent);
+        } else {
+            summaryDiv.innerHTML = `<strong style="color:var(--primary)">⚠️ דגשים לבדיקה (מה-AI):</strong><div style="margin-top:5px; color:#ddd">${aiContent}</div>`;
+        }
+    }
+    // ---------------------------------------------------
+
+    // יצירת הצ'ק ליסט הרגיל...
     const categories = [
-        { name: "מנוע ונוזלים", items: ["נזילות שמן", "מפלס מים (נוזל קירור)", "רעש מנוע", "מצבר (תאריך)", "עשן (לבן/שחור)"] },
-        { name: "גיר והנעה", items: ["העברת הילוכים", "מכות בגיר", "ציריות וגומיות", "רעשים בנסיעה"] },
-        { name: "שלדה ומרכב", items: ["תיקוני צבע/פחחות", "רווחים בדלתות", "קורות שלדה", "פנסים ושמשות"] },
-        { name: "פנים ובטיחות", items: ["מזגן (קור/חום)", "חלונות חשמל", "נורות אזהרה", "צמיגים (יובש/שחיקה)"] }
+        { name: "מנוע", items: ["נזילות שמן", "מפלס מים", "רעש מנוע", "רצועות", "עשן"] },
+        { name: "גיר", items: ["העברת הילוכים", "מכות בגיר", "ציריות", "רעידות"] },
+        { name: "שלדה", items: ["תאונות/תיקוני צבע", "קורה קדמית", "קורה אחורית", "חלודה"] },
+        { name: "חשמל ופנים", items: ["מזגן", "חלונות", "נורות אזהרה", "צמיגים"] }
     ];
 
     let html = "";
@@ -201,7 +232,6 @@ function startInspection() {
     document.getElementById('list-content').innerHTML = html;
     window.scrollTo(0,0);
 }
-
 function shareToWhatsApp() {
     const name = document.getElementById('display-name').innerText;
     const aiText = document.getElementById('ai-text').innerText;
