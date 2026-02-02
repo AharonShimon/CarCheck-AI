@@ -3,25 +3,24 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
-// זה הפתרון לשגיאה! מאשר לכל דפדפן לקבל את המידע
-app.use(cors({ origin: '*' }));
+app.use(cors());
 
+// השרת יקשיב לנתיב /car/ ואז מספר הלוחית
 app.get('/car/:plate', async (req, res) => {
-    try {
-        const plate = req.params.plate;
-        const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad24d-fdef-41c6-b135-61366030b62d&filters={"mispar_rechev":"${plate}"}`;
-        
-        console.log("Fetching plate:", plate); // עוזר לבדוק ב-Logs של Render
+    const plate = req.params.plate;
+    // כתובת המאגר הממשלתי
+    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${plate}"}`;
 
+    try {
         const response = await axios.get(url);
-        
-        // מוודא שהחזרנו תשובה תקינה גם אם לא נמצא רכב
         res.json(response.data);
     } catch (error) {
-        console.error("Error fetching data:", error.message);
-        res.status(500).json({ error: "Failed to fetch data", details: error.message });
+        console.error("Error fetching data:", error);
+        res.status(500).json({ error: "Failed to fetch data" });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
