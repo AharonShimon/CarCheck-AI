@@ -1,71 +1,130 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const path = require('path'); // מודול לניהול נתיבי קבצים
+const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// הגדרת ה-AI
+/* =========================
+   CONFIG
+========================= */
+const PORT = process.env.PORT || 10000;
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// --- פתרון לשגיאת ה-GET / ---
-// הקוד הזה אומר לשרת: כשמישהו נכנס לכתובת הראשית, שלח לו את קובץ ה-HTML
+/* =========================
+   STATIC FRONTEND
+========================= */
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// נתיב הניתוח (API)
-app.post('/analyze-car', async (req, res) => {
-    const { plate, brand, model, year } = req.body;
-    let finalBrand = brand;
-    let finalModel = model;
-    let finalYear = year;
-    let govData = null;
+/* =========================
+   HELPERS
+========================= */
+const isValidPlate = (plate) =>
+    typeof plate === 'string' && /^[0-9]{7,8}$/.test(plate);
 
+const fetchGovData = async (plate) => {
+    const govUrl = `https://data.gov.il/api/3/action/datastore_search`;
+    const response = await axios.get(govUrl, {
+        timeout: 4000,
+        params: {
+            resource_id: "053ad243-5e8b-4334-8397-47883b740881",
+            filters: JSON.stringify({ mispar_rechev: plate })
+        }
+    });
+
+    return response.data?.result?.records?.[0] || null;
+};
+
+const analyzeWithAI = async ({ brand, model, year }) => {
+    const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+אתה מומחה רכב ישראלי.
+נתח את הרכב הבא והחזר JSON בלבד:
+
+{
+ "rating": מספר בין 1 ל-5,
+ "issues": [ "בעיה 1", "בעיה 2", "בעיה 3" ],
+ "summary": "סיכום קצר"
+}
+
+רכב:
+יצרן: ${brand}
+דגם: ${model}
+שנה: ${year}
+`;
+
+    const result = await aiModel.generateContent(prompt);
+    const text = result.response.text();
+
+    return JSON.parse(text);
+};
+
+/* =========================
+   API – ANALYZE CAR
+========================= */
+app.post('/analyze-car', async (req, res) => {
     try {
-        // בדיקה מול משרד התחבורה
-        if (plate && plate.length >= 7) {
-            const govUrl = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${plate}"}`;
-            const govRes = await axios.get(govUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-            
-            if (govRes.data.result.records.length > 0) {
-                govData = govRes.data.result.records[0];
-                finalBrand = govData.tozeret_nm.trim();
-                finalModel = govData.kinuy_mishari.trim();
+        const { plate, brand, model, year } = req.body;
+
+        let finalBrand = brand;
+        let finalModel = model;
+        let finalYear = year;
+        let govData = null;
+
+        // GOV lookup
+        if (isValidPlate(plate)) {
+            govData = await fetchGovData(plate);
+            if (govData) {
+                finalBrand = govData.tozeret_nm?.trim();
+                finalModel = govData.kinuy_mishari?.trim();
                 finalYear = govData.shnat_yitzur;
             }
         }
 
-        if (!finalBrand) {
-            return res.status(400).json({ error: "נא להזין פרטי רכב" });
+        // Validation
+        if (!finalBrand || !finalModel || !finalYear) {
+            return res.status(400).json({
+                error: "חסרים פרטי רכב לניתוח"
+            });
         }
 
-        // ניתוח AI
-        const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `אתה מומחה רכב ישראלי בכיר. נתח את הרכב: ${finalBrand} ${finalModel} שנת ${finalYear}.
-        1. תן ציון אמינות כללי מתוך 5 כוכבים (לדוגמה: ⭐⭐⭐⭐).
-        2. פרט ב-3-4 נקודות קצרות תקלות נפוצות (מכניות/חשמליות/מחלות דגם).
-        רשום הכל בעברית בצורה מקצועית.`;
-        
-        const result = await aiModel.generateContent(prompt);
-        const aiText = result.response.text();
+        // AI Analysis
+        const aiResult = await analyzeWithAI({
+            brand: finalBrand,
+            model: finalModel,
+            year: finalYear
+        });
 
-        res.json({
-            govData: govData,
-            aiAnalysis: aiText,
-            detectedInfo: { brand: finalBrand, model: finalModel, year: finalYear }
+        return res.json({
+            vehicle: {
+                plate,
+                brand: finalBrand,
+                model: finalModel,
+                year: finalYear
+            },
+            govData,
+            aiAnalysis: aiResult
         });
 
     } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ error: "שגיאה בניתוח" });
+        console.error("Analyze Error:", error.message);
+
+        return res.status(500).json({
+            error: "שגיאה בניתוח הרכב",
+            details: error.message
+        });
     }
 });
 
-const PORT = process.env.PORT || 10000;
+/* =========================
+   START SERVER
+========================= */
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`🚗 CarCheck AI Pro running on port ${PORT}`);
 });
