@@ -187,4 +187,33 @@ function goToInspection() {
     const items = {
         "מנוע": ["נזילות שמן", "מפלס מים", "רעש מנוע", "עשן"],
         "גיר": ["העברת הילוכים", "מכות בגיר", "רעידות"],
-        "שלדה": ["
+        "שלדה": ["תאונות", "תיקוני צבע", "חלודה", "פנסים"],
+        "פנים": ["מזגן", "חלונות", "ריפודים", "נורות אזהרה"]
+    };
+    
+    let html = "";
+    for(let cat in items) {
+        html += `<div class="category">${cat}</div>`;
+        items[cat].forEach(i => {
+            html += `<div class="check-item" onclick="this.querySelector('.cb').classList.toggle('checked')"><div class="cb"></div><span>${i}</span></div>`;
+        });
+    }
+    document.getElementById('list-content').innerHTML = html;
+}
+
+function showLoading(text) {
+    document.getElementById('loading-text').innerText = text;
+    document.getElementById('loading-overlay').style.display = 'flex';
+}
+function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+}
+
+function shareToWhatsApp() {
+    const name = document.getElementById('display-name').innerText;
+    const ai = document.getElementById('ai-text').innerText;
+    window.open(`https://wa.me/?text=*בדיקת רכב:* ${name}%0A%0A*AI:* ${ai}`, '_blank');
+}
+</script>
+</body>
+</html>
