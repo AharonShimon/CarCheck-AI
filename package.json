@@ -1,7 +1,6 @@
 {
   "name": "carcheck-ai-pro",
   "version": "1.0.0",
-  "description": "Smart Car Inspection with Gov Data & AI",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
