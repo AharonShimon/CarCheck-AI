@@ -1,133 +1,152 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CarCheck AI Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CarCheck AI Pro</title>
+    <style>
+        :root { --primary: #00F2FF; --accent: #7000FF; --bg: #0A0A0C; --card: #16161D; --text: #FFFFFF; --danger: #FF3B3B; --success: #00FF85; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; direction: rtl; }
+        .container { padding: 20px; max-width: 500px; margin: auto; }
+        
+        /* עיצוב לוחית רישוי */
+        .plate-container { background: #FFB800; padding: 12px; border-radius: 12px; border: 4px solid #000; margin-bottom: 20px; display: flex; align-items: center; position: relative; }
+        .plate-input { background: none; border: none; font-size: 35px; font-weight: 900; width: 100%; text-align: center; outline: none; color: #000; letter-spacing: 2px; }
+        .il-tag { background: #003399; color: white; padding: 5px; border-radius: 4px; font-size: 10px; position: absolute; left: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center;}
 
-<style>
-:root{
---primary:#00F2FF;
---bg:#0A0A0C;
---card:#16161D;
---danger:#FF3B3B;
---success:#00FF85;
---warning:#FFB800;
---text:#fff;
-}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Arial}
-.container{max-width:500px;margin:auto;padding:20px}
-input,button{width:100%;padding:14px;border-radius:12px;border:none}
-button{background:linear-gradient(135deg,#00F2FF,#7000FF);color:#fff;font-size:16px;font-weight:bold}
-.card{background:var(--card);padding:16px;border-radius:16px;margin-top:15px}
-.hidden{display:none}
-.star{color:#FFD700;font-size:22px}
-.issue{margin-top:5px}
-.item{display:flex;justify-content:space-between;padding:12px;background:#222;border-radius:10px;margin-top:8px}
-.status-btn{padding:6px 10px;border-radius:8px;font-size:12px}
-.ok{background:var(--success)}
-.fail{background:var(--warning)}
-.critical{background:var(--danger)}
-</style>
+        .ios-field { width: 100%; padding: 15px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 12px; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+        .btn-main { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; transition: 0.3s; }
+        
+        #ai-card { display: none; background: rgba(0, 242, 255, 0.05); border: 1px solid var(--primary); border-radius: 18px; padding: 20px; margin: 20px 0; animation: fadeIn 0.5s; }
+        #ai-text { white-space: pre-wrap; line-height: 1.6; font-size: 15px; }
+
+        .category { margin-top: 30px; }
+        .cat-header { color: var(--primary); font-size: 19px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 12px; }
+        .check-item { background: var(--card); padding: 16px; border-radius: 14px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
+        .cb { width: 24px; height: 24px; border: 2px solid #444; border-radius: 8px; margin-left: 15px; }
+        .cb.checked { background: var(--danger); border-color: var(--danger); display: flex; align-items: center; justify-content: center; }
+        .cb.checked::after { content: "✕"; color: white; font-size: 14px; }
+
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
-
-<h2 style="text-align:center">🚗 CarCheck AI Pro</h2>
-
-<input id="plate" placeholder="מספר רישוי">
-<input id="brand" placeholder="יצרן">
-<input id="model" placeholder="דגם">
-<input id="year" placeholder="שנה">
-
-<button onclick="analyze()">נתח רכב</button>
-
-<div id="aiCard" class="card hidden">
-<h3>🔍 ניתוח AI</h3>
-<div id="stars"></div>
-<div id="issues"></div>
-<p id="summary"></p>
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p style="color: var(--primary); margin-top: 15px;">ה-AI מנתח נתונים...</p>
 </div>
 
-<div id="checklist" class="hidden"></div>
+<div id="screen-input" class="container">
+    <h1 style="text-align:center">CarCheck <span style="color:var(--primary)">AI PRO</span></h1>
+    
+    <div class="plate-container">
+        <div class="il-tag"><span>IL</span><span>ישראל</span></div>
+        <input id="plate" class="plate-input" type="tel" placeholder="מספר רכב" maxlength="8">
+    </div>
 
-<button id="pdfBtn" class="hidden" onclick="window.print()">שמור PDF</button>
+    <div id="status" style="text-align: center; margin-bottom: 15px;"></div>
+    
+    <button class="btn-main" onclick="fetchFromRender()">נתח רכב עם AI 🤖</button>
 
+    <div id="ai-card">
+        <strong style="color:var(--primary); font-size: 17px;">🤖 ניתוח תקלות ואמינות:</strong>
+        <div id="ai-text" style="margin-top: 10px;"></div>
+    </div>
+
+    <div style="margin-top: 25px;">
+        <input id="brand" class="ios-field" placeholder="יצרן">
+        <input id="model" class="ios-field" placeholder="דגם">
+        <input id="year" class="ios-field" placeholder="שנה">
+    </div>
+
+    <button class="btn-main" style="background: #222;" onclick="startInspection()">המשך לבדיקת 40 נקודות ➔</button>
+</div>
+
+<div id="screen-check" class="container" style="display:none">
+    <h2 id="display-name" style="text-align:center; margin-bottom:5px"></h2>
+    <p id="display-plate" style="text-align:center; color:var(--primary); margin-top:0"></p>
+    <div id="list-content"></div>
+    <button class="btn-main" style="margin-top:20px" onclick="window.print()">שמור דוח PDF 📄</button>
+    <button class="btn-main" style="background:#25D366; margin-top:10px" onclick="shareToWhatsApp()">שתף בוואטסאפ 🟢</button>
 </div>
 
 <script>
+async function fetchFromRender() {
+    const plate = document.getElementById('plate').value;
+    const brandField = document.getElementById('brand');
+    const modelField = document.getElementById('model');
+    const yearField = document.getElementById('year');
+    const overlay = document.getElementById('loading-overlay');
+    const status = document.getElementById('status');
 
-const checklistItems = [
- {id:1,title:"נזילות שמן",severity:"critical"},
- {id:2,title:"רעידות מנוע",severity:"critical"},
- {id:3,title:"בלמים",severity:"normal"},
- {id:4,title:"צמיגים",severity:"normal"},
- {id:5,title:"מזגן",severity:"normal"}
-];
+    overlay.style.display = "flex";
+    status.innerHTML = "";
 
-async function analyze(){
-const plate=document.getElementById("plate").value;
-const brand=document.getElementById("brand").value;
-const model=document.getElementById("model").value;
-const year=document.getElementById("year").value;
+    try {
+        const response = await fetch('/analyze-car', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                plate, 
+                brand: brandField.value, 
+                model: modelField.value, 
+                year: yearField.value 
+            })
+        });
+        const data = await response.json();
 
-const res=await fetch("/analyze-car",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({plate,brand,model,year})
-});
-
-const data=await res.json();
-renderAI(data.aiAnalysis);
-renderChecklist();
+        if (data.aiAnalysis) {
+            if (data.detectedInfo) {
+                brandField.value = data.detectedInfo.brand || brandField.value;
+                modelField.value = data.detectedInfo.model || modelField.value;
+                yearField.value = data.detectedInfo.year || yearField.value;
+            }
+            document.getElementById('ai-card').style.display = "block";
+            document.getElementById('ai-text').innerText = data.aiAnalysis;
+            status.innerHTML = "<span style='color:var(--success)'>✅ ניתוח הושלם</span>";
+        }
+    } catch (e) {
+        status.innerHTML = "<span style='color:var(--danger)'>⚠️ שגיאה בחיבור לשרת</span>";
+    } finally {
+        overlay.style.display = "none";
+    }
 }
 
-function renderAI(ai){
-document.getElementById("aiCard").classList.remove("hidden");
+function startInspection() {
+    if (!document.getElementById('brand').value) { alert("זהה רכב קודם!"); return; }
+    document.getElementById('screen-input').style.display = 'none';
+    document.getElementById('screen-check').style.display = 'block';
+    document.getElementById('display-name').innerText = document.getElementById('brand').value + " " + document.getElementById('model').value;
+    document.getElementById('display-plate').innerText = document.getElementById('plate').value || "בדיקה ידנית";
 
-let stars="";
-for(let i=0;i<ai.rating;i++){stars+="⭐";}
-document.getElementById("stars").innerHTML=stars;
+    const categories = [
+        { name: "מנוע", items: ["נזילות שמן", "מפלס נוזל קירור", "רעשים", "תושבות", "מצבר", "עשן אגזוז"] },
+        { name: "גיר", items: ["החלקה", "נקישות", "ציריות", "גומיות הגנה"] },
+        { name: "שלדה", items: ["תיקוני צבע", "מכות שלדה", "ריתוכים", "פגושים", "שמשות"] },
+        { name: "בטיחות", items: ["צמיגים", "בלמים", "חופש הגה", "חגורות", "נורות אזהרה"] }
+    ];
 
-let issues="";
-ai.issues.forEach(i=>{
-issues+=`<div class="issue">⚠ ${i}</div>`;
-});
-document.getElementById("issues").innerHTML=issues;
-
-document.getElementById("summary").innerText=ai.summary;
+    let html = "";
+    categories.forEach(cat => {
+        html += `<div class="category"><div class="cat-header">${cat.name}</div>`;
+        cat.items.forEach(item => {
+            html += `<div class="check-item" onclick="this.querySelector('.cb').classList.toggle('checked')"><div class="cb"></div><span>${item}</span></div>`;
+        });
+        html += `</div>`;
+    });
+    document.getElementById('list-content').innerHTML = html;
 }
 
-function renderChecklist(){
-const wrap=document.getElementById("checklist");
-wrap.classList.remove("hidden");
-let html="<h3>🛠 בדיקה פיזית</h3>";
-
-checklistItems.forEach(i=>{
-html+=`
-<div class="item">
-${i.title}
-<div>
-<button class="status-btn ok" onclick="setStatus(this,'ok')">תקין</button>
-<button class="status-btn fail" onclick="setStatus(this,'fail')">ליקוי</button>
-<button class="status-btn critical" onclick="setStatus(this,'critical')">חמור</button>
-</div>
-</div>`;
-});
-
-wrap.innerHTML=html;
-document.getElementById("pdfBtn").classList.remove("hidden");
+function shareToWhatsApp() {
+    const name = document.getElementById('display-name').innerText;
+    const ai = document.getElementById('ai-text').innerText;
+    const text = `*דוח בדיקת רכב AI*%0A*רכב:* ${name}%0A%0A*ניתוח AI:*%0A${ai}`;
+    window.open(`https://wa.me/?text=${text}`, '_blank');
 }
-
-function setStatus(btn,status){
-const parent=btn.parentElement;
-[...parent.children].forEach(b=>b.style.opacity="0.3");
-btn.style.opacity="1";
-}
-
 </script>
-
 </body>
 </html>
