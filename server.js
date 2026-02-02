@@ -5,40 +5,54 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // קריטי לקבלת נתונים מהאתר
 
-// שימוש במפתח הסודי מהגדרות השרת
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-app.get('/car/:plate', async (req, res) => {
-    const plate = req.params.plate;
-    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${plate}"}`;
+app.post('/analyze-car', async (req, res) => {
+    const { plate, brand, model, year } = req.body;
+    
+    let finalBrand = brand;
+    let finalModel = model;
+    let finalYear = year;
+    let govData = null;
 
     try {
-        const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        
-        if (response.data && response.data.result.records.length > 0) {
-            const car = response.data.result.records[0];
-            const brand = car.tozeret_nm.trim();
-            const model = car.kinuy_mishari.trim();
-            const year = car.shnat_yitzur;
-
-            // הפעלת ה-AI לחיפוש תקלות נפוצות
-            const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const prompt = `אתה מומחה רכב. רשום ב-3 נקודות קצרות מאוד תקלות נפוצות לרכב: ${brand} דגם ${model} שנת ${year}. רק התקלות בעברית.`;
+        // שלב 1: אם יש לוחית, מושכים נתונים מ-GOV.IL
+        if (plate && plate.length >= 7) {
+            const govUrl = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${plate}"}`;
+            const govRes = await axios.get(govUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
             
-            const result = await aiModel.generateContent(prompt);
-            const aiText = result.response.text();
-
-            res.json({
-                carData: car,
-                aiAnalysis: aiText
-            });
-        } else {
-            res.status(404).json({ error: "רכב לא נמצא" });
+            if (govRes.data.result.records.length > 0) {
+                govData = govRes.data.result.records[0];
+                finalBrand = govData.tozeret_nm.trim();
+                finalModel = govData.kinuy_mishari.trim();
+                finalYear = govData.shnat_yitzur;
+            }
         }
+
+        // שלב 2: אם אין מספיק נתונים גם אחרי GOV וגם ידני
+        if (!finalBrand) {
+            return res.status(400).json({ error: "נא להזין מספר רכב או פרטי יצרן ודגם" });
+        }
+
+        // שלב 3: פנייה ל-AI (Gemini) לקבלת תקלות נפוצות
+        const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = `אתה מומחה רכב ישראלי. רשום ב-3 נקודות קצרות ובולטות תקלות נפוצות לרכב: ${finalBrand} דגם ${finalModel} משנת ${finalYear}. רשום רק את התקלות בעברית.`;
+        
+        const result = await aiModel.generateContent(prompt);
+        const aiText = result.response.text();
+
+        // מחזירים הכל לאתר
+        res.json({
+            govData: govData,
+            aiAnalysis: aiText,
+            detectedInfo: { brand: finalBrand, model: finalModel, year: finalYear }
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "שגיאה בחיבור" });
+        console.error("Error:", error);
+        res.status(500).json({ error: "שגיאה בתהליך הניתוח" });
     }
 });
 
