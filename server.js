@@ -2,16 +2,16 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenerativeAI } = require("@google/generative-ai"); // תיקון: נוסף AI בסוף
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // הגדרת ה-AI של גוגל
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY); // תיקון: שם המשתנה genAI
 
-// הצגת דף הבית (פותר את שגיאת ה-Cannot GET /)
+// הצגת דף הבית
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -21,7 +21,7 @@ app.post('/analyze-car', async (req, res) => {
     let { plate, brand, model, year } = req.body;
 
     try {
-        // שלב א': חיפוש במשרד התחבורה אם הוזנה לוחית והשדות ריקים
+        // שלב א': חיפוש במשרד התחבורה
         if (plate && plate.length >= 7 && !brand) {
             const govUrl = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${plate}"}`;
             const govRes = await axios.get(govUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
@@ -34,12 +34,14 @@ app.post('/analyze-car', async (req, res) => {
             }
         }
 
-        // שלב ב': ניתוח AI על בסיס השדות (יצרן ודגם)
+        // שלב ב': ניתוח AI
         if (!brand || !model) {
             return res.status(400).json({ error: "חובה להזין יצרן ודגם לניתוח ה-AI" });
         }
 
-        const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // שינוי המודל ל-gemini-pro לפתרון שגיאת ה-404
+        const aiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+        
         const prompt = `אתה מומחה רכב ישראלי בכיר. נתח את האמינות של: ${brand} ${model} שנת ${year}.
         1. תן ציון אמינות כללי מתוך 5 כוכבים (למשל: ⭐⭐⭐⭐).
         2. פרט ב-3 נקודות קצרות תקלות נפוצות או "מחלות דגם" המוכרות במוסכים בישראל.
