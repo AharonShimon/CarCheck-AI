@@ -12,11 +12,11 @@ app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// ניקוי המפתח מרווחים (חשוב מאוד!)
+// ניקוי רווחים מהמפתח - קריטי למניעת תקלות!
 const API_KEY = (process.env.GEMINI_API_KEY || "").trim();
 
 app.post('/analyze-ai', async (req, res) => {
-    console.log(`🚀 בקשה נכנסה:`, req.body);
+    console.log(`🚀 נתונים התקבלו:`, req.body);
     
     if (!API_KEY) {
         console.error("❌ שגיאה: המפתח לא מוגדר ב-Render");
@@ -26,39 +26,43 @@ app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year } = req.body;
         
-        // שימוש במודל gemini-pro (הכי בטוח ויציב)
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`;
+        // --- שינוי למודל המהיר שלך: gemini-1.5-flash ---
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
         
         const response = await axios.post(url, {
             contents: [{ parts: [{ 
-                text: `Act as a car mechanic. Analyze: "${brand} ${model} ${year}". 
-                Return ONLY valid JSON (no markdown):
+                text: `You are a strict car mechanic. 
+                Analyze this car: "${brand} ${model} year ${year}". 
+                
+                Output ONLY valid JSON in this format (no markdown, no backticks):
                 {
-                    "reliability_score": 85, 
-                    "summary": "Hebrew summary max 15 words", 
-                    "common_faults": ["Fault1 in Hebrew", "Fault2 in Hebrew", "Fault3 in Hebrew"], 
-                    "pros": ["Pro1 in Hebrew", "Pro2 in Hebrew"]
+                    "reliability_score": (integer 0-100), 
+                    "summary": (Hebrew text, max 15 words), 
+                    "common_faults": [(3 Hebrew faults)], 
+                    "pros": [(2 Hebrew pros)]
                 }` 
             }] }]
         });
         
-        // חילוץ וניקוי התשובה
+        // חילוץ התשובה בצורה בטוחה
         let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        rawText = rawText.replace(/```json|```/g, '').trim(); // מוריד סימני קוד אם יש
+        // ניקוי "לכלוך" שה-AI לפעמים מוסיף (כמו ```json)
+        rawText = rawText.replace(/```json|```/g, '').trim(); 
         
-        console.log("✅ גוגל ענה בהצלחה!");
+        console.log("✅ Gemini 1.5 Flash ענה בהצלחה!");
         res.json({ success: true, aiAnalysis: JSON.parse(rawText) });
 
     } catch (error) {
         console.error("❌ שגיאה מול גוגל:", error.response?.data || error.message);
-        // במקרה חירום - מחזיר תשובה ברירת מחדל כדי שהאתר לא ייתקע
+        
+        // תשובת גיבוי למקרה של תקלה (כדי שהמשתמש לא ייתקע)
         res.json({ 
             success: true, 
             aiAnalysis: {
-                reliability_score: 70,
-                summary: "לא ניתן היה ליצור קשר עם ה-AI, אך הרכב נחשב אמין.",
-                common_faults: ["בלאי טבעי", "מערכת חשמל"],
-                pros: ["חלפים זולים", "שוק טוב"]
+                reliability_score: 0,
+                summary: "המודל עסוק כרגע, אנא נסה שנית.",
+                common_faults: ["שגיאת תקשורת"],
+                pros: ["-"]
             }
         });
     }
