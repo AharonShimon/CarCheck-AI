@@ -2,457 +2,194 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CarCheck AI Pro</title>
     <style>
-        :root { 
-            --primary: #00F2FF; 
-            --accent: #7000FF;
-            --bg: #0A0A0C; 
-            --card: #16161D; 
-            --text: #E0E0E0; 
-            --danger: #FF3B3B; 
-            --success: #00FF85; 
-            --warning: #FFB800; 
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f0f2f5; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 25px; }
+        
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        input:focus { border-color: #1a73e8; }
+        
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 16px; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #1558b0; }
+        .btn-ai { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; width: 100%; margin-top: 15px; }
+        .btn-manual { background: #6c757d; color: white; width: 100%; margin-top: 10px; }
 
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            direction: rtl; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        /* כרטיס תוצאות */
+        .result-card { display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .car-specs { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-right: 4px solid #1a73e8; }
+        
+        /* כרטיס AI */
+        .ai-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .score-badge { float: left; padding: 5px 12px; border-radius: 20px; font-weight: bold; color: white; font-size: 0.9em; }
+        .score-high { background: #28a745; }
+        .score-med { background: #ffc107; color: black; }
+        .score-low { background: #dc3545; }
 
-        .container { padding: 20px; max-width: 500px; margin: auto; padding-bottom: 90px; }
-
-        /* עיצוב לוחית רישוי */
-        .plate-container { 
-            background: #FFB800; 
-            padding: 5px; 
-            border-radius: 12px; 
-            border: 3px solid #000; 
-            display: flex; 
-            align-items: center; 
-            position: relative; 
-            margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(255, 184, 0, 0.2);
-        }
-        .plate-input { 
-            background: none; 
-            border: none; 
-            font-size: 38px; 
-            font-weight: 900; 
-            width: 100%; 
-            text-align: center; 
-            outline: none; 
-            letter-spacing: 4px; 
-            font-family: monospace; 
-            color: #000;
-            z-index: 2;
-        }
-        .il-tag { 
-            background: #003399; 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 11px; 
-            position: absolute; 
-            left: 8px; 
-            font-weight: bold; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            line-height: 1;
-        }
-
-        /* שדות קלט וכפתורים */
-        select, input, .btn { 
-            width: 100%; 
-            padding: 16px; 
-            background: var(--card); 
-            border: 1px solid #333; 
-            color: #fff; 
-            border-radius: 14px; 
-            margin-bottom: 15px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            transition: 0.2s;
-        }
-        select:focus, input:focus { border-color: var(--primary); outline: none; }
-
-        .btn { background: #007AFF; font-weight: bold; cursor: pointer; border: none; font-size: 18px; color: white; }
-        .btn:active { transform: scale(0.98); }
-        .btn-ai { background: linear-gradient(135deg, var(--primary), var(--accent)); margin-top: 10px; }
-        .btn-finish { background: var(--success); color: #000; margin-top: 30px; font-weight: 800; }
-
-        #status-msg { text-align: center; font-weight: bold; min-height: 20px; margin-bottom: 10px; }
-        #ai-result { 
-            display: none; 
-            background: rgba(0, 242, 255, 0.1); 
-            border: 1px solid var(--primary); 
-            padding: 18px; 
-            border-radius: 15px; 
-            margin-top: 20px; 
-            line-height: 1.6; 
-            font-size: 15px;
-        }
-
-        /* צ'ק ליסט */
-        .category { margin-top: 30px; color: var(--primary); font-size: 18px; font-weight: 800; border-bottom: 2px solid #222; padding-bottom: 8px; }
-        .check-item { 
-            background: var(--card); 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-top: 10px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        .item-left { display: flex; align-items: center; flex-grow: 1; cursor: pointer; }
-        .cb { 
-            width: 26px; 
-            height: 26px; 
-            border: 2px solid #555; 
-            border-radius: 8px; 
-            margin-left: 15px; 
-            flex-shrink: 0; 
-            transition: 0.2s;
-        }
-        .cb.checked { 
-            background: var(--danger); 
-            border-color: var(--danger); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .cb.checked::after { content: "✕"; color: white; font-weight: bold; }
-
-        .info-btn { 
-            width: 32px; 
-            height: 32px; 
-            background: rgba(255,255,255,0.1); 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: var(--primary); 
-            font-weight: bold; 
-            cursor: pointer; 
-        }
-        .tooltip { 
-            display: none; 
-            background: #222; 
-            padding: 12px; 
-            border-radius: 10px; 
-            font-size: 13px; 
-            color: #ccc; 
-            margin-top: 5px; 
-            border: 1px solid #444; 
-            line-height: 1.4; 
-        }
-
-        /* מסך תוצאה סופית */
-        #score-overlay { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.96); 
-            z-index: 2000; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            text-align: center; 
-            padding: 25px; 
-        }
-        .score-circle { 
-            width: 150px; 
-            height: 150px; 
-            border-radius: 50%; 
-            border: 8px solid var(--success); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 55px; 
-            font-weight: 900; 
-            color: var(--success); 
-            margin-bottom: 25px; 
-            box-shadow: 0 0 30px rgba(0, 255, 133, 0.2);
-        }
-
-        /* אנימציית טעינה */
-        #loader { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.85); 
-            z-index: 9999; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            backdrop-filter: blur(5px);
-        }
-        .spinner { 
-            width: 50px; 
-            height: 50px; 
-            border: 4px solid #333; 
-            border-top-color: var(--primary); 
-            border-radius: 50%; 
-            animation: spin 0.8s linear infinite; 
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .lists-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .pros { background: #e6fffa; padding: 10px; border-radius: 8px; font-size: 0.9em; }
+        .cons { background: #fff5f5; padding: 10px; border-radius: 8px; font-size: 0.9em; }
+        ul { padding-right: 20px; margin: 5px 0; }
+        
+        .loading { text-align: center; color: #666; margin-top: 10px; display: none; }
+        
+        /* אזור ידני */
+        .manual-section { margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; }
+        .manual-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     </style>
 </head>
 <body>
 
-<div id="loader">
-    <div class="spinner"></div>
-    <p id="loader-text" style="color:white; margin-top:15px; font-weight:bold;">בודק נתונים...</p>
-</div>
-
-<div id="screen-input" class="container">
-    <h1 style="text-align:center;">CarCheck AI <span style="color:var(--primary)">PRO</span></h1>
+<div class="container">
+    <h2>🚗 מנתח רכבים Pro</h2>
     
-    <div class="plate-container">
-        <div class="il-tag"><span>ישראל</span><span>IL</span></div>
-        <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8">
+    <div class="input-group">
+        <input type="text" id="plateInput" placeholder="הכנס מספר רישוי (8 ספרות)">
+        <button class="btn-primary" onclick="fetchCarData()">חפש</button>
     </div>
-    
-    <button class="btn" onclick="superSearch()">🔍 איתור רכב (מקור ממשלתי)</button>
-    <div id="status-msg"></div>
 
-    <div style="margin-top:20px; border-top:1px solid #333; padding-top:20px;">
-        <label style="color:#888; margin-bottom:5px; display:block;">יצרן:</label>
-        <select id="brand" onchange="updateModels()"><option value="">בחר יצרן...</option></select>
+    <div id="result" class="result-card">
+        <div class="car-specs">
+            <h3 id="carTitle" style="margin:0 0 10px 0;"></h3>
+            <div id="carDetails" style="color:#555;"></div>
+        </div>
         
-        <label style="color:#888; margin-bottom:5px; display:block;">דגם (בחירה או הקלדה חופשית):</label>
-        <input id="model" list="model-list" placeholder="הקלד דגם או בחר..." disabled>
-        <datalist id="model-list"></datalist>
-        
-        <label style="color:#888; margin-bottom:5px; display:block;">שנה:</label>
-        <input id="year" type="number" placeholder="למשל: 2022">
-        
-        <button class="btn btn-ai" onclick="analyzeAI()">🤖 הפעל ניתוח AI והמשך</button>
+        <button id="aiBtn" class="btn-ai" onclick="getAiAnalysis()">✨ הפעל ניתוח AI</button>
+        <div id="loader" class="loading">Gemini מנתח נתונים...</div>
+        <div id="aiContent"></div>
     </div>
-    <div id="ai-result"></div>
-</div>
 
-<div id="screen-check" class="container" style="display:none">
-    <h2 id="check-header" style="text-align:center;"></h2>
-    <div id="checklist-content"></div>
-    <button class="btn btn-finish" onclick="calculateScore()">📊 שקלל ציון סופי</button>
-    <button class="btn" style="background:transparent; color:#666;" onclick="location.reload()">ביטול</button>
-</div>
-
-<div id="score-overlay">
-    <div class="score-circle" id="final-score">0</div>
-    <h2 id="score-msg" style="color:white; margin:0;"></h2>
-    <p id="score-desc" style="color:#aaa; max-width:300px; margin-bottom:30px; line-height:1.5;"></p>
-    <button class="btn" style="background:#25D366; color:white;" onclick="shareResult()">שתף בוואטסאפ 🟢</button>
-    <button class="btn" style="background:#333; margin-top:15px;" onclick="location.reload()">בדיקה חדשה</button>
+    <div class="manual-section">
+        <h4 style="margin-bottom:10px; color:#666;">או חפש לפי דגם (ללא מספר רישוי):</h4>
+        <div class="manual-inputs">
+            <input type="text" id="mBrand" placeholder="יצרן">
+            <input type="text" id="mModel" placeholder="דגם">
+            <input type="number" id="mYear" placeholder="שנה">
+        </div>
+        <button class="btn-manual" onclick="getAiAnalysis(true)">נתח ידנית</button>
+    </div>
 </div>
 
 <script>
-// --- מסד נתונים מלא ---
-const carDatabase = {
-    "אאודי": ["A1", "A3", "A4", "A6", "Q3", "Q5", "e-tron"],
-    "אופל": ["קורסה", "אסטרה", "מוקה", "קרוסלנד"],
-    "BYD": ["Atto 3", "Han", "Dolphin", "Seal"],
-    "BMW": ["סדרה 1", "סדרה 3", "X1", "X3", "X5", "iX"],
-    "ג'ילי": ["Geometry C"],
-    "הונדה": ["סיוויק", "ג'אז", "CR-V", "HR-V"],
-    "וולוו": ["XC40", "XC60", "S60"],
-    "טויוטה": ["קורולה", "יאריס", "C-HR", "RAV4", "לנד קרוזר", "אייגו", "פריוס", "היילקס"],
-    "טסלה": ["מודל 3", "מודל Y"],
-    "יונדאי": ["i10", "i20", "i30", "איוניק", "טוסון", "סנטה פה", "אלנטרה", "וניו"],
-    "מאזדה": ["2", "3", "6", "CX-3", "CX-5", "CX-30"],
-    "מיצובישי": ["אאוטלנדר", "ASX", "ספייס סטאר"],
-    "ניסאן": ["מיקרה", "ג'וק", "קשקאי", "אקס-טרייל"],
-    "סוזוקי": ["סוויפט", "ויטארה", "קרוסאובר", "ג'ימני", "איגניס"],
-    "סקודה": ["אוקטביה", "סופרב", "קאמיק", "קארוק", "קודיאק", "פאביה"],
-    "סיאט": ["איביזה", "לאון", "ארונה", "אטקה"],
-    "פיג'ו": ["208", "2008", "3008", "5008"],
-    "קיה": ["פיקנטו", "ריו", "פורטה", "ספורטאז'", "נירו", "סטוניק", "סורנטו"],
-    "רנו": ["קליאו", "קפצ'ור", "מגאן", "גרנד קופה"],
-    "שברולט": ["ספארק", "מאליבו", "טראקס"]
-};
+    let currentCar = {};
 
-const checklistData = {
-    "מנוע ונוזלים": [
-        { name: "מפלס ואיכות שמן", tip: "בדוק מדיד. שמן צריך להיות בין הקווים. צבע 'טחינה' (אפור-לבן) מעיד על ערבוב מים בשמן." },
-        { name: "נוזל קירור", tip: "בדוק במיכל העודפים. המים צריכים להיות צבעוניים ולא חומים מחלודה או שמן." },
-        { name: "נזילות גלויות", tip: "חפש סימני שמן טרי או נוזל קירור סביב המנוע ובחלק התחתון של הרכב." },
-        { name: "רעש מנוע וסל\"ק", tip: "הקשב למנוע בסרק. חפש תקתוקים מתכתיים או רעידות חריגות בלוח המחוונים." },
-        { name: "עשן מהאגזוז", tip: "עשן לבן סמיך מעיד על חדירת מים. עשן כחלחל מעיד על שריפת שמן." }
-    ],
-    "גיר ושלדה": [
-        { name: "שילוב הילוכים", tip: "העבר בין P, R, D. וודא שאין מכה חזקה או השהיה ארוכה בשילוב." },
-        { name: "החלקה בנסיעה", tip: "בזמן האצה חזקה, וודא שהטורים לא עולים ללא האצה מקבילה של הרכב." },
-        { name: "הפרשי גוון צבע", tip: "הסתכל על הרכב בשמש מזווית. הבדלי גוון בין חלקי פח מעידים על תאונה וצביעה." },
-        { name: "קורות שלדה", tip: "בדוק בתא המנוע ובתא המטען שאין סימני ריתוך לא מקוריים או מעיכות בברזל." },
-        { name: "מצב צמיגים", tip: "בדוק 4 ספרות (תאריך). צמיג מעל 4 שנים או יבש הוא פסול בבטיחות." }
-    ],
-    "חשמל ומערכות": [
-        { name: "מזגן (קור/חום)", tip: "הפעל על קור מקסימלי. וודא שיוצא אוויר קפוא תוך דקה אחת." },
-        { name: "נורות אזהרה", tip: "וודא שכל הנורות נכבות לאחר ההנעה (במיוחד מנוע, כריות אוויר וגיר)." },
-        { name: "מערכות פנים", tip: "בדוק חלונות חשמל, נעילה מרכזית, מצלמת רוורס ומולטימדיה." }
-    ]
-};
-
-// אתחול דרופדאון
-const brandSel = document.getElementById('brand');
-Object.keys(carDatabase).sort().forEach(b => brandSel.innerHTML += `<option value="${b}">${b}</option>`);
-
-function updateModels() {
-    const b = brandSel.value;
-    const mInput = document.getElementById('model');
-    const dList = document.getElementById('model-list');
-    dList.innerHTML = ''; mInput.value = '';
-    if(b && carDatabase[b]) {
-        mInput.disabled = false;
-        carDatabase[b].forEach(m => dList.innerHTML += `<option value="${m}">`);
-    } else mInput.disabled = true;
-}
-
-// איתור רכב עם עוקף חסימות (Proxy)
-async function superSearch() {
-    let p = document.getElementById('plate').value.replace(/\D/g,'');
-    if(p.length < 7) return alert("מספר לוחית קצר מדי");
-    
-    document.getElementById('loader').style.display = 'flex';
-    document.getElementById('status-msg').innerHTML = "";
-
-    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053ad243-5e8b-4334-8397-47883b740881&filters={"mispar_rechev":"${p}"}`;
-    const proxyUrl = `https://corsproxy.io/?` + encodeURIComponent(url);
-
-    try {
-        const res = await fetch(proxyUrl);
-        const data = await res.json();
+    async function fetchCarData() {
+        const plate = document.getElementById('plateInput').value;
+        const resDiv = document.getElementById('result');
+        const details = document.getElementById('carDetails');
         
-        if(data.success && data.result.records.length > 0) {
-            const c = data.result.records[0];
-            document.getElementById('year').value = c.shnat_yitzur || c.SHNAT_YITZUR;
-            const brandRaw = c.tozeret_nm || c.TOZERET_NM;
-            
-            for(let opt of brandSel.options) {
-                if(brandRaw.includes(opt.value) && opt.value !== "") {
-                    brandSel.value = opt.value;
-                    updateModels();
-                    break;
-                }
+        if (!plate) return alert("נא להזין מספר");
+
+        try {
+            const response = await fetch('/get-car-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plate })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                const c = result.data;
+                currentCar = { brand: c.tozeret_nm, model: c.kinuy_mishari, year: c.shnat_yitzur };
+                
+                document.getElementById('carTitle').innerText = `${currentCar.brand} ${currentCar.model}`;
+                details.innerText = `שנה: ${currentCar.year} | נפח: ${c.nefach_manoa} | בעלות: ${c.baalut}`;
+                
+                resDiv.style.display = 'block';
+                document.getElementById('aiContent').innerHTML = ""; // נקה תוצאות קודמות
+                document.getElementById('aiBtn').style.display = 'block';
+            } else {
+                alert("רכב לא נמצא. נסה להזין ידנית למטה.");
             }
-            document.getElementById('model').value = c.kinuy_mishari || "";
-            document.getElementById('status-msg').innerHTML = "<span style='color:var(--success)'>✅ רכב אותר בהצלחה!</span>";
-        } else {
-            document.getElementById('status-msg').innerHTML = "<span style='color:var(--warning)'>⚠️ לא נמצא במאגר. הזן ידנית.</span>";
-        }
-    } catch(e) {
-        document.getElementById('status-msg').innerHTML = "<span style='color:var(--danger)'>❌ בעיית תקשורת למאגר.</span>";
-    } finally {
-        document.getElementById('loader').style.display = 'none';
+        } catch (e) { alert("שגיאת תקשורת"); }
     }
-}
 
-// ניתוח AI
-async function analyzeAI() {
-    const b = brandSel.value, m = document.getElementById('model').value, y = document.getElementById('year').value;
-    if(!b || !m) return alert("אנא מלא יצרן ודגם");
-    
-    document.getElementById('loader').style.display = 'flex';
-    document.getElementById('loader-text').innerText = "ה-AI מנתח אמינות...";
-
-    try {
-        const res = await fetch('/analyze-ai', {
-            method:'POST', 
-            headers:{'Content-Type':'application/json'}, 
-            body: JSON.stringify({brand:b, model:m, year:y})
-        });
-        const data = await res.json();
+    async function getAiAnalysis(isManual = false) {
+        const aiBox = document.getElementById('aiContent');
+        const loader = document.getElementById('loader');
+        const btn = document.getElementById('aiBtn');
         
-        if(data.success) {
-            const resDiv = document.getElementById('ai-result');
-            resDiv.style.display = 'block';
-            resDiv.innerHTML = `<strong>דוח אמינות AI:</strong><br>${data.aiAnalysis.replace(/\n/g, '<br>')}`;
+        let data = isManual ? {
+            brand: document.getElementById('mBrand').value,
+            model: document.getElementById('mModel').value,
+            year: document.getElementById('mYear').value
+        } : currentCar;
+
+        if (!data.brand || !data.model) return alert("חסרים נתוני רכב");
+
+        // הצגת UI בזמן טעינה
+        if(!isManual) btn.style.display = 'none';
+        loader.style.display = 'block';
+        aiBox.innerHTML = "";
+        if(isManual) document.getElementById('result').style.display = 'block';
+
+        try {
+            const response = await fetch('/analyze-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
             
-            if(!document.getElementById('cont-btn')) {
-                const btn = document.createElement('button');
-                btn.id = 'cont-btn'; btn.className = 'btn'; btn.innerText = 'המשך לצ\'ק ליסט בדיקה ➔';
-                btn.style.marginTop = '15px'; btn.onclick = goToChecklist;
-                document.getElementById('screen-input').appendChild(btn);
+            loader.style.display = 'none';
+
+            if (result.success) {
+                renderAiCard(result.data, result.source);
+            } else {
+                aiBox.innerHTML = `<p style="color:red">שגיאה: ${result.error}</p>`;
+                if(!isManual) btn.style.display = 'block';
             }
+        } catch (e) {
+            loader.style.display = 'none';
+            alert("שגיאה בחיבור ל-AI");
         }
-    } catch(e) {
-        alert("שגיאה בחיבור ל-AI. ניתן להמשיך לבדיקה ידנית.");
-        goToChecklist();
-    } finally {
-        document.getElementById('loader').style.display = 'none';
     }
-}
 
-function goToChecklist() {
-    document.getElementById('screen-input').style.display = 'none';
-    document.getElementById('screen-check').style.display = 'block';
-    document.getElementById('check-header').innerText = `${brandSel.value} ${document.getElementById('model').value} (${document.getElementById('year').value})`;
-    renderChecklist();
-    window.scrollTo(0,0);
-}
+    function renderAiCard(data, source) {
+        const aiBox = document.getElementById('aiContent');
+        
+        // קביעת צבע לפי ציון
+        let scoreClass = 'score-low';
+        if (data.reliability_score >= 8) scoreClass = 'score-high';
+        else if (data.reliability_score >= 5) scoreClass = 'score-med';
 
-function renderChecklist() {
-    let h = "", i = 0;
-    const aiContent = document.getElementById('ai-result').innerHTML;
-    if(aiContent) h += `<div style="font-size:14px; margin-bottom:20px; padding:15px; border:1px solid var(--primary); border-radius:12px; background:rgba(0,242,255,0.05)">${aiContent}</div>`;
+        const sourceIcon = source === 'cache' ? '⚡' : '🤖';
 
-    for(let cat in checklistData) {
-        h += `<div class="category">${cat}</div>`;
-        checklistData[cat].forEach(item => {
-            i++;
-            h += `<div class="check-item">
-                <div class="item-left" onclick="toggleCB(${i})">
-                    <div class="cb" id="cb_${i}"></div>
-                    <span>${item.name}</span>
+        aiBox.innerHTML = `
+            <div class="ai-card">
+                <div style="overflow:hidden; margin-bottom:10px;">
+                    <span class="score-badge ${scoreClass}">אמינות: ${data.reliability_score}/10</span>
+                    <h3 style="margin:0 10px 0 0; font-size:1.1em;">דוח AI</h3>
                 </div>
-                <div class="info-btn" onclick="toggleTip(${i})">?</div>
+                
+                <p><strong>📝 סיכום:</strong> ${data.summary}</p>
+                
+                <div class="lists-container">
+                    <div class="pros">
+                        <strong style="color:#28a745">✅ יתרונות</strong>
+                        <ul>${data.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+                    </div>
+                    <div class="cons">
+                        <strong style="color:#dc3545">⚠️ חסרונות</strong>
+                        <ul>${data.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+                    </div>
+                </div>
+
+                <div style="margin-top:15px; font-size:0.9em; background:#f8f9fa; padding:10px; border-radius:5px;">
+                    <strong>🔧 תקלות נפוצות:</strong> ${data.common_faults.join(', ')}
+                </div>
+                
+                <div style="text-align:left; font-size:0.75em; color:#aaa; margin-top:5px;">
+                    מקור מידע: ${sourceIcon} ${source === 'cache' ? 'זיכרון מהיר' : 'ניתוח חי'}
+                </div>
             </div>
-            <div class="tooltip" id="tip_${i}">${item.tip}</div>`;
-        });
+        `;
     }
-    document.getElementById('checklist-content').innerHTML = h;
-}
-
-function toggleCB(id) { document.getElementById('cb_'+id).classList.toggle('checked'); }
-function toggleTip(id) { 
-    const el = document.getElementById('tip_'+id); 
-    el.style.display = (el.style.display === 'block') ? 'none' : 'block'; 
-}
-
-function calculateScore() {
-    const total = document.querySelectorAll('.cb').length;
-    const checked = document.querySelectorAll('.cb.checked').length;
-    const score = Math.max(0, 100 - Math.round((checked/total)*100));
-    
-    document.getElementById('final-score').innerText = score;
-    const msg = document.getElementById('score-msg');
-    const desc = document.getElementById('score-desc');
-    
-    if(score > 85) {
-        msg.innerText = "רכב מומלץ מאוד ✅";
-        desc.innerText = "לא נמצאו ליקויים משמעותיים בבדיקה הראשונית.";
-    } else if(score > 65) {
-        msg.innerText = "מצב סביר - לבדוק במוסך ⚠️";
-        desc.innerText = "נמצאו מספר ליקויים. מומלץ לקחת לבדיקת מעבדה מקצועית.";
-    } else {
-        msg.innerText = "לא מומלץ לקנייה ❌";
-        desc.innerText = "נמצאו ליקויים רבים או משמעותיים. סיכון גבוה לתקלות יקרות.";
-    }
-    
-    document.getElementById('score-overlay').style.display = 'flex';
-}
-
-function shareResult() {
-    const txt = `בדיקת רכב: ${document.getElementById('check-header').innerText}\nציון סופי: ${document.getElementById('final-score').innerText}\nסטטוס: ${document.getElementById('score-msg').innerText}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`);
-}
 </script>
+
 </body>
 </html>
