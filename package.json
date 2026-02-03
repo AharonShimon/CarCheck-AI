@@ -1,19 +1,17 @@
 {
   "name": "carcheck-ai-pro",
-  "version": "1.0.0",
-  "description": "AI Car Inspection Assistant with Caching",
+  "version": "2.0.0",
+  "description": "AI Car Inspection Assistant",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "node-cache": "^5.1.2"
+    "dotenv": "^16.3.0",
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=18.0.0"
