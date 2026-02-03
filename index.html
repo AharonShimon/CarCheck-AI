@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CarCheck AI Pro | Ultimate Fixed</title>
+    <title>CarCheck AI Pro | Live Edition</title>
     <style>
         :root { 
             --bg-deep: #0b0e14;
@@ -286,19 +286,68 @@ function renderYears() {
 window.shiftY = function(n) { yBase += (n * 9); renderYears(); };
 function closeAll() { document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active')); document.querySelectorAll('.selector-trigger').forEach(t => t.classList.remove('active')); }
 
+// ---------------------------------------------------------------------------
+// התיקון הקריטי: חיבור אמיתי לשרת!
+// ---------------------------------------------------------------------------
 window.startAI = async function() {
-    const b = document.getElementById('val-b').value, m = document.getElementById('val-m').value, y = document.getElementById('val-y').value;
+    const b = document.getElementById('val-b').value;
+    const m = document.getElementById('val-m').value;
+    const y = document.getElementById('val-y').value;
+
     if(!b || !m || !y) return alert("בחר רכב מלא");
     
     document.getElementById('loader').style.display = 'flex';
+    
     try {
-        // סימולציית שגיאה ב-OneCompiler (כי אין שרת אמיתי)
-        throw new Error("AI Simulation"); 
+        // שליחת בקשה אמיתית לשרת ב-Render
+        const res = await fetch('/analyze-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ brand: b, model: m, year: y })
+        });
+
+        // בדיקה אם השרת ענה בהצלחה (סטטוס 200)
+        if (!res.ok) throw new Error("Server Error");
+
+        const data = await res.json();
+        
+        if(data.success) {
+            const ai = data.aiAnalysis;
+            const p = document.getElementById('ai-panel');
+            p.style.display = 'block';
+            
+            // בניית פאנל התוצאות מה-AI
+            p.innerHTML = `
+                <div class="ai-card">
+                    <h3>ציון אמינות AI</h3>
+                    <div style="font-size:35px; font-weight:900; color:var(--accent)">${ai.reliability_score}</div>
+                    <p style="font-size:14px; color:var(--text-dim); margin-top:10px;">${ai.summary}</p>
+                    
+                    <div style="margin-top:15px; text-align:right;">
+                        <div style="font-size:12px; font-weight:bold; color:var(--danger);">⚠️ תקלות נפוצות:</div>
+                        <ul style="font-size:12px; color:var(--text-dim); padding-right:20px; margin-top:5px;">
+                            ${ai.common_faults.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <button class="btn-main" onclick="window.goToChecklist(false)" style="background:var(--accent); color:#000; margin-top:20px;">📝 המשך לבדיקה פיזית</button>
+                </div>
+            `;
+            // גלילה חלקה לתוצאה
+            p.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            throw new Error("AI Logic Failed");
+        }
+
     } catch(e) { 
+        console.error("AI Error:", e);
+        // אם נכשל - חכה שנייה ואז עבור לבדיקה ידנית עם הודעת שגיאה
         setTimeout(() => {
             document.getElementById('loader').style.display = 'none';
-            window.goToChecklist(true); // מעבר עם דגל שגיאה
-        }, 1500);
+            window.goToChecklist(true); 
+        }, 1000);
+    } finally { 
+        document.getElementById('loader').style.display = 'none'; 
     }
 };
 
@@ -323,7 +372,6 @@ window.goToChecklist = function(aiFailed) {
     for(let cat in checklistItems) {
         content.innerHTML += `<div class="category-header"><span class="category-title">${cat}</span><div class="category-line"></div></div>`;
         checklistItems[cat].forEach((item, index) => {
-            // יצירת מזהה ייחודי לכל פריט
             const uid = Math.random().toString(36).substr(2, 9);
             content.innerHTML += `
                 <div class="check-item" onclick="window.toggleCB('${uid}')">
