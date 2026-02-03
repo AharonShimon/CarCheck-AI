@@ -2,425 +2,96 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CarCheck AI Pro | Live Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarCheck AI</title>
+    <link rel="stylesheet" href="style.css"> 
     <style>
-        :root { 
-            --bg-deep: #0b0e14;
-            --bg-glass: rgba(23, 28, 41, 0.95);
-            --accent: #00f0ff;
-            --accent-glow: rgba(0, 240, 255, 0.25);
-            --border: rgba(42, 59, 85, 0.6);
-            --text-bright: #ffffff;
-            --text-dim: #94a3b8;
-            --gradient: linear-gradient(135deg, #00f0ff 0%, #007aff 100%);
-            --danger: #ff3b3b;
-            --success: #00ff94;
-        }
-
-        body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            background-color: var(--bg-deep);
-            background-image: radial-gradient(circle at 50% 0%, #1a253a 0%, var(--bg-deep) 80%);
-            color: var(--text-bright); margin: 0; direction: rtl; min-height: 100vh;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        .container { padding: 30px 20px; width: 100%; max-width: 450px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
-
-        /* כותרות ולוגו */
-        header { text-align: center; margin-bottom: 30px; width: 100%; }
-        header h1 { font-size: 26px; font-weight: 900; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
-        header h1 span { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
-
-        /* לוחית רישוי */
-        .plate-box { background: #ffc400; padding: 4px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px; width: 100%; max-width: 320px; }
-        .plate-inner { border: 2px solid #000; border-radius: 7px; display: flex; align-items: center; padding: 6px; }
-        .plate-input { background: none; border: none; font-size: 38px; font-weight: 900; width: 100%; text-align: center; outline: none; letter-spacing: 4px; font-family: monospace; color: #000; }
-
-        /* שדות בחירה (Pickers) */
-        .field-group { margin-bottom: 22px; width: 100%; display: flex; flex-direction: column; align-items: center; position: relative; }
-        label { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; width: 100%; text-align: center; }
-        
-        .selector-trigger {
-            width: 100%; padding: 16px 20px; background: var(--bg-glass);
-            backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 14px;
-            color: #fff; font-size: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; position: relative;
-            transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        .selector-trigger:active { transform: scale(0.98); border-color: var(--accent); }
-        .selector-trigger:after { content: '▼'; font-size: 10px; color: var(--accent); position: absolute; left: 20px; }
-        .selector-trigger.active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
-
-        /* חלונית הגריד */
-        .popup-grid {
-            display: none; position: absolute; top: 100%; left: 0; right: 0;
-            background: #111827; border: 1px solid var(--accent); border-radius: 16px;
-            padding: 15px; z-index: 1000; margin-top: 8px; box-shadow: 0 25px 50px rgba(0,0,0,0.9);
-            max-height: 300px; overflow-y: auto;
-        }
-        .popup-grid.active { display: block; animation: slideUp 0.2s ease-out; }
-
-        .grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
-        .grid-item { 
-            padding: 12px 5px; text-align: center; background: #1f2937; border-radius: 8px; 
-            font-size: 13px; font-weight: 600; cursor: pointer; color: #d1d5db; border: 1px solid transparent; 
-        }
-        .grid-item:hover { border-color: var(--accent); color: var(--accent); background: rgba(0, 240, 255, 0.05); }
-
-        .btn-main {
-            width: 100%; padding: 18px; border-radius: 14px; border: none;
-            font-size: 17px; font-weight: 800; cursor: pointer; color: white;
-            background: var(--gradient); box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3); margin-top: 10px; text-align: center;
-        }
-
-        /* תוצאות AI */
-        .ai-panel { margin-top: 35px; display: none; width: 100%; text-align: center; }
-        .ai-card { background: var(--bg-glass); padding: 20px; border-radius: 16px; border-bottom: 4px solid var(--accent); margin-bottom: 15px; }
-
-        /* צ'ק ליסט משופר */
-        #screen-check { display: none; width: 100%; flex-direction: column; align-items: center; }
-        
-        /* לוגו יצרן */
-        .brand-logo-container { width: 100%; display: flex; justify-content: center; margin-bottom: 15px; }
-        .brand-logo-img { height: 60px; width: auto; filter: drop-shadow(0 0 10px var(--accent-glow)); }
-        
-        .category-header { width: 100%; margin: 35px 0 15px 0; text-align: center; }
-        .category-title { color: var(--text-bright); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
-        .category-line { width: 60px; height: 2px; background: var(--gradient); margin: 5px auto 0 auto; border-radius: 2px; }
-
-        .check-item { 
-            width: 100%; background: var(--bg-glass); padding: 16px; border-radius: 12px; 
-            margin-bottom: 10px; border: 1px solid var(--border); display: flex; 
-            justify-content: space-between; align-items: center; box-sizing: border-box;
-        }
-
-        .cb-custom { width: 26px; height: 26px; border: 2px solid var(--border); border-radius: 6px; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
-        .cb-custom.checked { background: var(--danger); border-color: var(--danger); display: flex; align-items: center; justify-content: center; }
-        .cb-custom.checked:after { content: '✕'; color: white; font-weight: 900; font-size: 14px; }
-        
-        .item-text-wrapper { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
-        
-        /* טולטיפ */
-        .info-bubble {
-            width: 24px; height: 24px; background: rgba(0, 240, 255, 0.1);
-            border: 1px solid var(--accent); border-radius: 50%;
-            color: var(--accent); display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 14px; cursor: pointer;
-        }
-        .tooltip-box { display: none; width: 100%; background: #111827; padding: 15px; border-radius: 12px; font-size: 13px; color: var(--text-dim); margin-top: -5px; margin-bottom: 15px; border: 1px solid var(--accent); line-height: 1.5; text-align: right; }
-
-        /* הודעת כשל AI מיושרת לשמאל */
-        .ai-fail-box { display: none; width: 100%; justify-content: flex-start; padding: 10px; background: rgba(255, 59, 59, 0.1); border-radius: 8px; margin-bottom: 20px; align-items: center; gap: 10px; color: var(--danger); font-weight: 700; font-size: 13px; box-sizing: border-box; }
-
-        #loader { display: none; position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
-        .orbit { width: 40px; height: 40px; border: 2px solid var(--accent-glow); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s infinite linear; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        /* כאן אפשר להשאיר CSS בסיסי או להעביר לקובץ style.css */
+        body { font-family: sans-serif; padding: 20px; background: #f1f5f9; text-align: center; }
+        .container { background: white; padding: 2rem; border-radius: 20px; max-width: 500px; margin: 0 auto; }
+        select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; font-size: 16px; }
+        button { background: #2563eb; color: white; font-weight: bold; cursor: pointer; }
+        .result-box { display: none; background: #fff; margin-top: 20px; padding: 20px; border-top: 2px solid #eee; }
     </style>
 </head>
 <body>
 
-<div id="loader"><div class="orbit"></div></div>
-
-<div id="screen-input" class="container">
-    <header><h1>CarCheck <span>AI PRO</span></h1></header>
-    <div class="plate-box"><div class="plate-inner"><input id="plate" class="plate-input" type="tel" placeholder="00000000" maxlength="8"></div></div>
-    
-    <button class="btn-main" style="background: #1f2937; margin-bottom: 35px;" onclick="window.superSearch()">🔍 איתור ממשלתי מהיר</button>
-
-    <div class="field-group">
-        <label>יצרן</label>
-        <div id="brand-trigger" class="selector-trigger" onclick="window.handlePicker('brand')">בחר יצרן...</div>
-        <div id="brand-popup" class="popup-grid"><div id="brand-grid" class="grid-layout"></div></div>
-    </div>
-
-    <div class="field-group">
-        <label>דגם</label>
-        <div id="model-trigger" class="selector-trigger" onclick="window.handlePicker('model')">בחר דגם...</div>
-        <div id="model-popup" class="popup-grid"><div id="model-grid" class="grid-layout"></div></div>
-    </div>
-
-    <div class="field-group">
-        <label>שנה</label>
-        <div id="year-trigger" class="selector-trigger" onclick="window.handlePicker('year')">בחר שנה...</div>
-        <div id="year-popup" class="popup-grid">
-            <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:var(--accent); font-weight:800;">
-                <span onclick="event.stopPropagation(); window.shiftY(-1)" style="cursor:pointer; padding:0 10px;">❮</span>
-                <span id="y-range-text"></span>
-                <span onclick="event.stopPropagation(); window.shiftY(1)" style="cursor:pointer; padding:0 10px;">❯</span>
-            </div>
-            <div id="year-grid" class="grid-layout"></div>
-        </div>
-    </div>
-
-    <input type="hidden" id="val-b"><input type="hidden" id="val-m"><input type="hidden" id="val-y">
-    
-    <button class="btn-main" onclick="window.startAI()">🚀 התחל חקירת AI</button>
-    <button class="btn-main" style="background: transparent; border: 1px solid var(--border); margin-top: 15px; color: var(--text-dim);" onclick="window.goToChecklist(false)">📝 דלג לבדיקה ידנית</button>
-    
-    <div id="ai-panel" class="ai-panel"></div>
-</div>
-
-<div id="screen-check" class="container">
-    <header>
-        <div class="brand-logo-container">
-            <img id="brand-logo" class="brand-logo-img" src="" alt="Logo" style="display:none;">
-        </div>
-        <div id="ai-fail-row" class="ai-fail-box"><span>⚠️</span><span>נכשל חיבור AI - מצב בדיקה ידנית</span></div>
-    </header>
-    <div id="checklist-content" style="width: 100%;"></div>
-    <button class="btn-main" style="margin-top: 50px; background: var(--success); color: #000;" onclick="window.showFinalResult()">📊 סיום וחשב ציון</button>
-    <button class="btn-main" style="background: transparent; border: 1px solid var(--border); margin-top: 15px; color: var(--text-dim);" onclick="location.reload()">חזור</button>
-</div>
-
-<div id="screen-result" class="container" style="display:none">
-    <header><h1>ציון <span>סופי</span></h1></header>
-    <div id="final-gauge" style="width:150px; height:150px; border-radius:50%; border:8px solid var(--success); display:flex; align-items:center; justify-content:center; font-size:50px; font-weight:900; color:var(--success); margin:30px 0;">0</div>
-    <div id="result-text" style="text-align:center; font-size:18px; margin-bottom:20px;"></div>
-    <button class="btn-main" onclick="location.reload()">בדיקה חדשה</button>
-</div>
-
-<script>
-// נתונים
-const db = { 
-    "אאודי": ["A3", "A4", "Q3", "Q5"], "ב.מ.וו": ["סדרה 3", "X1", "X3", "X5"], 
-    "טויוטה": ["קורולה", "RAV4", "יאריס", "C-HR"], "יונדאי": ["טוסון", "איוניק", "i20", "i10"], 
-    "מאזדה": ["3", "6", "CX-3", "CX-5", "CX-30"], "סובארו": ["XV", "פורסטר", "B4"], 
-    "פורד": ["פוקוס", "קוגה", "אקספלורר"], "קיה": ["פיקנטו", "נירו", "ספורטאז'", "סטוניק"], 
-    "שברולט": ["ספארק", "אקווינוקס", "טראוורס"], "סוזוקי": ["סוויפט", "ויטארה", "ג'ימני"] 
-};
-
-// מיפוי לוגואים לאנגלית עבור URL
-const brandMap = {
-    "מאזדה": "mazda", "טויוטה": "toyota", "יונדאי": "hyundai", "קיה": "kia", 
-    "שברולט": "chevrolet", "סובארו": "subaru", "פורד": "ford", "סוזוקי": "suzuki", 
-    "אאודי": "audi", "ב.מ.וו": "bmw"
-};
-
-// בדיקות מורחבות
-const checklistItems = {
-    "מנוע ונוזלים": [
-        { name: "פתח מילוי שמן ('טחינה')", tip: "פתח את הפקק הצהוב. משקע לבן? ברח!" },
-        { name: "בועות במיכל עיבוי", tip: "בזמן מנוע עובד - בועות במים = ראש מנוע גמור." },
-        { name: "מדיד שמן (מפלס וצבע)", tip: "שמן שחור מאוד או חסר? הזנחה קשה." },
-        { name: "נזילות שמן טריות", tip: "פנס לבלוק המנוע. רטיבות? תקלה." },
-        { name: "ריח דלק חריף", tip: "ריח דלק סביב הרכב מעיד על נזילה מסוכנת." },
-        { name: "רעש מנוע (תקתוקים)", tip: "רעש מתכתי בטורים נמוכים? בעיה." }
-    ],
-    "גיר ושלדה": [
-        { name: "שילוב הילוך (מכה)", tip: "מכה במעבר ל-R או D? הגיר עייף." },
-        { name: "החלקה בנסיעה", tip: "גז נותן רעש אבל הרכב לא מאיץ? הגיר מחליק." },
-        { name: "קליקים בציריות", tip: "סיבוב הגה מלא בנסיעה - רעש 'קליק'? ציריה גמורה." },
-        { name: "מבחן מגנט (פחחים)", tip: "מגנט נופל מהכנף? יש שם טונות של שפכטל." },
-        { name: "תאריך צמיגים", tip: "מעל 4 שנים? הצמיג יבש ומסוכן." }
-    ],
-    "מרכב ובטיחות (חדש)": [
-        { name: "סדקים בשמשות", tip: "חפש סדקים קטנים בשמשה הקדמית." },
-        { name: "גומיות דלתות קרועות", tip: "גומי יבש גורם לרעשי רוח וכניסת מים." },
-        { name: "חגורות בטיחות", tip: "משוך חזק - חייב להינעל מיד." },
-        { name: "בלאי גומיות דוושות", tip: "דוושות שחוקות מאוד ברכב 'חדש'? זייפו קילומטראז'." },
-        { name: "רטיבות מתחת לשטיחים", tip: "הרם שטיח. רטוב? נזילת מזגן או חדירת גשם." }
-    ],
-    "חשמל": [
-        { name: "מזגן (קירור וחימום)", tip: "חימום לא עובד? תיקון יקר מאוד." },
-        { name: "חלונות ונעילה", tip: "הכל חייב לעבוד חלק." },
-        { name: "קורוזיה במצבר", tip: "אבקה לבנה על הקטבים? המצבר בסוף חייו." },
-        { name: "נורת מנוע (Check Engine)", tip: "דולקת קבוע? יש תקלה פעילה." }
-    ]
-};
-
-let yBase = 2018;
-
-// פונקציות גלובליות ל-Window (חובה ב-OneCompiler)
-window.handlePicker = function(type) {
-    const popups = document.querySelectorAll('.popup-grid');
-    const triggers = document.querySelectorAll('.selector-trigger');
-    const target = document.getElementById(type + '-popup');
-    const isOpen = target.classList.contains('active');
-
-    popups.forEach(p => p.classList.remove('active'));
-    triggers.forEach(t => t.classList.remove('active'));
-
-    if (!isOpen) {
-        target.classList.add('active');
-        document.getElementById(type + '-trigger').classList.add('active');
-        if(type === 'brand') renderBrands();
-        if(type === 'year') renderYears();
-        if(type === 'model') {
-            const b = document.getElementById('val-b').value;
-            if(b) renderModels(b); else alert("בחר יצרן קודם");
-        }
-    }
-};
-
-function renderBrands() {
-    const g = document.getElementById('brand-grid'); g.innerHTML = '';
-    Object.keys(db).sort().forEach(b => {
-        const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = b;
-        d.onclick = (e) => { e.stopPropagation(); document.getElementById('val-b').value = b; document.getElementById('brand-trigger').innerText = b; closeAll(); };
-        g.appendChild(d);
-    });
-}
-
-function renderModels(b) {
-    const g = document.getElementById('model-grid'); g.innerHTML = '';
-    db[b].forEach(m => {
-        const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = m;
-        d.onclick = (e) => { e.stopPropagation(); document.getElementById('val-m').value = m; document.getElementById('model-trigger').innerText = m; closeAll(); };
-        g.appendChild(d);
-    });
-}
-
-function renderYears() {
-    const g = document.getElementById('year-grid'); g.innerHTML = '';
-    document.getElementById('y-range-text').innerText = `${yBase}-${yBase+8}`;
-    for(let i=0; i<9; i++) {
-        const y = yBase + i;
-        const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = y;
-        d.onclick = (e) => { e.stopPropagation(); document.getElementById('val-y').value = y; document.getElementById('year-trigger').innerText = y; closeAll(); };
-        g.appendChild(d);
-    }
-}
-
-window.shiftY = function(n) { yBase += (n * 9); renderYears(); };
-function closeAll() { document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active')); document.querySelectorAll('.selector-trigger').forEach(t => t.classList.remove('active')); }
-
-// ---------------------------------------------------------------------------
-// התיקון הקריטי: חיבור אמיתי לשרת!
-// ---------------------------------------------------------------------------
-window.startAI = async function() {
-    const b = document.getElementById('val-b').value;
-    const m = document.getElementById('val-m').value;
-    const y = document.getElementById('val-y').value;
-
-    if(!b || !m || !y) return alert("בחר רכב מלא");
-    
-    document.getElementById('loader').style.display = 'flex';
-    
-    try {
-        // שליחת בקשה אמיתית לשרת ב-Render
-        const res = await fetch('/analyze-ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ brand: b, model: m, year: y })
-        });
-
-        // בדיקה אם השרת ענה בהצלחה (סטטוס 200)
-        if (!res.ok) throw new Error("Server Error");
-
-        const data = await res.json();
+    <div class="container">
+        <h1>CarCheck AI 🔎</h1>
         
-        if(data.success) {
-            const ai = data.aiAnalysis;
-            const p = document.getElementById('ai-panel');
-            p.style.display = 'block';
-            
-            // בניית פאנל התוצאות מה-AI
-            p.innerHTML = `
-                <div class="ai-card">
-                    <h3>ציון אמינות AI</h3>
-                    <div style="font-size:35px; font-weight:900; color:var(--accent)">${ai.reliability_score}</div>
-                    <p style="font-size:14px; color:var(--text-dim); margin-top:10px;">${ai.summary}</p>
-                    
-                    <div style="margin-top:15px; text-align:right;">
-                        <div style="font-size:12px; font-weight:bold; color:var(--danger);">⚠️ תקלות נפוצות:</div>
-                        <ul style="font-size:12px; color:var(--text-dim); padding-right:20px; margin-top:5px;">
-                            ${ai.common_faults.map(f => `<li>${f}</li>`).join('')}
-                        </ul>
-                    </div>
+        <select id="brandSelect" onchange="loadModels()">
+            <option value="">יצרן...</option>
+        </select>
 
-                    <button class="btn-main" onclick="window.goToChecklist(false)" style="background:var(--accent); color:#000; margin-top:20px;">📝 המשך לבדיקה פיזית</button>
-                </div>
-            `;
-            // גלילה חלקה לתוצאה
-            p.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            throw new Error("AI Logic Failed");
+        <select id="modelSelect" disabled>
+            <option value="">דגם...</option>
+        </select>
+
+        <select id="yearSelect">
+            </select>
+
+        <button onclick="analyzeCar()" id="btnAnalyze">סרוק מחלות ידועות 🤖</button>
+
+        <div id="resultBox" class="result-box">
+            <h2 id="scoreDisplay">--</h2>
+            <p id="summaryText"></p>
+            <ul id="faultsList" style="color: red; text-align: right;"></ul>
+            <ul id="prosList" style="color: green; text-align: right;"></ul>
+        </div>
+    </div>
+
+    <script src="cars.js"></script>
+
+    <script>
+        // שימוש במשתנה carDatabase שמגיע מהקובץ החיצוני
+        window.onload = function() {
+            const brandSelect = document.getElementById("brandSelect");
+            Object.keys(carDatabase).sort().forEach(brand => {
+                brandSelect.innerHTML += `<option value="${brand}">${brand}</option>`;
+            });
+            
+            // מילוי שנים בקיצור
+            const yearSelect = document.getElementById("yearSelect");
+            for (let i = 2025; i >= 2005; i--) yearSelect.innerHTML += `<option value="${i}">${i}</option>`;
+        };
+
+        function loadModels() {
+            const brand = document.getElementById("brandSelect").value;
+            const modelSelect = document.getElementById("modelSelect");
+            modelSelect.innerHTML = '<option value="">דגם...</option>';
+            
+            if (brand) {
+                modelSelect.disabled = false;
+                carDatabase[brand].forEach(m => modelSelect.innerHTML += `<option value="${m}">${m}</option>`);
+            } else {
+                modelSelect.disabled = true;
+            }
         }
 
-    } catch(e) { 
-        console.error("AI Error:", e);
-        // אם נכשל - חכה שנייה ואז עבור לבדיקה ידנית עם הודעת שגיאה
-        setTimeout(() => {
-            document.getElementById('loader').style.display = 'none';
-            window.goToChecklist(true); 
-        }, 1000);
-    } finally { 
-        document.getElementById('loader').style.display = 'none'; 
-    }
-};
+        async function analyzeCar() {
+            // ... אותו קוד שליחה לשרת כמו קודם ...
+            const brand = document.getElementById("brandSelect").value;
+            const model = document.getElementById("modelSelect").value;
+            const year = document.getElementById("yearSelect").value;
+            
+            if(!brand || !model) return alert("חסר מידע");
 
-window.goToChecklist = function(aiFailed) {
-    const b = document.getElementById('val-b').value || "רכב"; 
-    document.getElementById('screen-input').style.display = 'none';
-    document.getElementById('screen-check').style.display = 'flex';
-    
-    // לוגיקה להצגת לוגו
-    const logoEl = document.getElementById('brand-logo');
-    const englishName = brandMap[b];
-    if (englishName) {
-        logoEl.src = `https://logo.clearbit.com/${englishName}.com`;
-        logoEl.style.display = 'block';
-    } else {
-        logoEl.style.display = 'none';
-    }
-
-    if(aiFailed) document.getElementById('ai-fail-row').style.display = 'flex';
-
-    const content = document.getElementById('checklist-content'); content.innerHTML = '';
-    for(let cat in checklistItems) {
-        content.innerHTML += `<div class="category-header"><span class="category-title">${cat}</span><div class="category-line"></div></div>`;
-        checklistItems[cat].forEach((item, index) => {
-            const uid = Math.random().toString(36).substr(2, 9);
-            content.innerHTML += `
-                <div class="check-item" onclick="window.toggleCB('${uid}')">
-                    <div class="item-text-wrapper">
-                        <div class="info-bubble" onclick="event.stopPropagation(); window.toggleTip('${uid}')">!</div>
-                        <span style="font-size:15px; font-weight:600;">${item.name}</span>
-                    </div>
-                    <div id="cb_${uid}" class="cb-custom"></div>
-                </div>
-                <div id="tip_${uid}" class="tooltip-box">${item.tip}</div>
-            `;
-        });
-    }
-    window.scrollTo(0,0);
-};
-
-window.toggleTip = function(id) { 
-    const t = document.getElementById('tip_'+id); 
-    t.style.display = (t.style.display === 'block') ? 'none' : 'block'; 
-};
-
-window.toggleCB = function(id) { 
-    document.getElementById('cb_'+id).classList.toggle('checked'); 
-};
-
-window.showFinalResult = function() {
-    const total = document.querySelectorAll('.cb-custom').length;
-    const fails = document.querySelectorAll('.cb-custom.checked').length;
-    const score = Math.max(0, 100 - Math.round((fails/total)*100));
-    
-    document.getElementById('screen-check').style.display = 'none';
-    document.getElementById('screen-result').style.display = 'flex';
-    document.getElementById('final-gauge').innerText = score;
-    
-    const txt = document.getElementById('result-text');
-    if(score > 85) { txt.innerText = "רכב מומלץ מאוד ✅"; txt.style.color = "var(--success)"; }
-    else if(score > 60) { txt.innerText = "מצב סביר - לבדוק במוסך ⚠️"; txt.style.color = "#ffb800"; }
-    else { txt.innerText = "לא מומלץ לקנייה ❌"; txt.style.color = "var(--danger)"; }
-};
-
-window.superSearch = function() { alert("פונקציה זו דורשת שרת פעיל"); };
-
-// סגירת פופאפים בלחיצה בחוץ
-document.addEventListener('click', (e) => {
-    if(!e.target.closest('.field-group')) {
-        document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.selector-trigger').forEach(t => t.classList.remove('active'));
-    }
-});
-</script>
+            const res = await fetch('/analyze-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ brand, model, year })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                document.getElementById("resultBox").style.display = "block";
+                document.getElementById("scoreDisplay").innerText = "ציון: " + data.aiAnalysis.reliability_score;
+                document.getElementById("summaryText").innerText = data.aiAnalysis.summary;
+                
+                document.getElementById("faultsList").innerHTML = data.aiAnalysis.common_faults.map(f => `<li>${f}</li>`).join('');
+                document.getElementById("prosList").innerHTML = data.aiAnalysis.pros.map(p => `<li>${p}</li>`).join('');
+            }
+        }
+    </script>
 </body>
 </html>
