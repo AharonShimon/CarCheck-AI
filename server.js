@@ -2,59 +2,97 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const NodeCache = require('node-cache');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// דף הבית
+// --- הגדרות אבטחה וביצועים ---
+app.use(helmet({ contentSecurityPolicy: false })); // אבטחת כותרות (בסיסית)
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '.'))); // הגשת קבצים סטטיים
+
+// הגבלת בקשות (Rate Limiting) - למניעת עומס
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 דקות
+    max: 50, // מקסימום 50 בקשות לכל IP
+    message: { error: "Too many requests, please try again later." }
+});
+app.use('/analyze-ai', limiter);
+app.use('/get-car-details', limiter);
+
+// זיכרון מטמון (Cache) - שומר תוצאות ל-24 שעות
+const aiCache = new NodeCache({ stdTTL: 86400 });
+
+// --- דף הבית ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- נתיב הבדיקה (זה מה שהיה חסר!) ---
-app.get('/test-status', async (req, res) => {
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-        const response = await axios.post(url, {
-            contents: [{ parts: [{ text: "test" }] }]
-        });
-        res.json({ 
-            ai_status: "✅ ACTIVE", 
-            model: "gemini-2.0-flash",
-            server_time: new Date().toISOString() 
-        });
-    } catch (error) {
-        res.json({ 
-            ai_status: "❌ ERROR", 
-            code: error.response ? error.response.status : "NO_RESPONSE",
-            details: error.response ? error.response.data : error.message
-        });
-    }
-});
-
-// נתיב ה-AI הראשי
+// --- נתיב ה-AI המשודרג (מחזיר JSON) ---
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
+
+    // ולידציה
+    if (!brand || !model || !year) {
+        return res.status(400).json({ success: false, error: "Missing parameters" });
+    }
+
+    // בדיקה ב-Cache
+    const cacheKey = `${brand}-${model}-${year}`.toLowerCase();
+    const cachedResult = aiCache.get(cacheKey);
+    
+    if (cachedResult) {
+        console.log(`⚡ Serving from Cache: ${cacheKey}`);
+        return res.json({ success: true, data: cachedResult, source: "cache" });
+    }
+
     try {
+        console.log(`🤖 Fetching new analysis for: ${brand} ${model} ${year}`);
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-        const prompt = `נתח רכב: ${brand} ${model} שנת ${year}. סיכום קצר בעברית: אמינות ותקלות נפוצות.`;
         
+        // פרומפט מהונדס לקבלת JSON בלבד
+        const prompt = `
+        Act as an expert car mechanic. Analyze: ${brand} ${model} year ${year}.
+        Return ONLY a raw JSON object (no markdown, no backticks) with this structure:
+        {
+            "summary": "Short Hebrew summary of the car (max 20 words)",
+            "pros": ["Hebrew pro 1", "Hebrew pro 2", "Hebrew pro 3"],
+            "cons": ["Hebrew con 1", "Hebrew con 2", "Hebrew con 3"],
+            "reliability_score": 1-10 (number only),
+            "common_faults": ["Fault 1", "Fault 2"]
+        }`;
+
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: prompt }] }]
         });
 
-        const aiText = response.data.candidates[0].content.parts[0].text;
-        res.json({ success: true, aiAnalysis: aiText });
+        let aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        // ניקוי הטקסט למקרה שג'מיני מוסיף ```json
+        if (aiText) {
+            aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsedData = JSON.parse(aiText);
+            
+            // שמירה בזיכרון
+            aiCache.set(cacheKey, parsedData);
+            
+            res.json({ success: true, data: parsedData, source: "live_api" });
+        } else {
+            throw new Error("Empty response from AI");
+        }
+
     } catch (error) {
-        console.error("AI Error:", error.response ? error.response.status : error.message);
-        res.status(500).json({ success: false, error: "AI_FAILED" });
+        console.error("AI Error:", error.message);
+        res.status(500).json({ success: false, error: "AI analysis failed" });
     }
 });
 
-// גיבוי למשרד התחבורה
+// --- נתיב משרד התחבורה ---
 app.post('/get-car-details', async (req, res) => {
     const { plate } = req.body;
     try {
@@ -69,4 +107,4 @@ app.post('/get-car-details', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server LIVE`));
+app.listen(PORT, () => console.log(`🚀 Pro Server running on port ${PORT}`));
