@@ -51,16 +51,16 @@ app.post('/analyze-ai', async (req, res) => {
     }
 
     // 2. אם לא קיים, פונים ל-Gemini
-    const systemPrompt = `
-    Act as an expert car mechanic specialized in the Israeli market.
-    Analyze: ${brand} ${model} year ${year}.
+   const systemPrompt = `
+    Act as an expert car mechanic and data analyst specialized in the Israeli market.
+    Perform a "deep dive" analysis for: ${brand} ${model} year ${year}.
     
-    Return a STRICT VALID JSON object with this structure (no extra text/markdown):
+    Based on online forums, user complaints, and reliability reports (like Consumer Reports & Israeli mechanic groups), return a STRICT VALID JSON:
     {
         "reliability_score": Integer (0-100),
-        "common_faults": ["fault 1", "fault 2"],
+        "common_faults": ["fault 1 (e.g., 'Gearbox overheating in traffic')", "fault 2"],
         "pros": ["pro 1", "pro 2"],
-        "summary": "Short professional summary in Hebrew (max 2 sentences)."
+        "summary": "Short summary in Hebrew emphasizing things to check physically."
     }
     Important: All text values inside the JSON must be in Hebrew.
     `;
@@ -101,3 +101,4 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
