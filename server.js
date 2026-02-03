@@ -12,56 +12,36 @@ app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// רשימת המודלים שהשרת ינסה אחד אחרי השני
-const MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-pro", "gemini-1.5-flash-latest"];
+// --- כאן!!! הדבק את המפתח האמיתי שלך בתוך הגרשיים ---
+// אל תסמוך על process.env כרגע. נכתוב את זה ישירות.
+const API_KEY = "AIzaSyD4OS_qtVQIfJXlbYZFHqE_71QMBkGZx3s"; 
 
 app.post('/analyze-ai', async (req, res) => {
-    console.log(`🚀 בקשה חדשה: ${req.body.brand} ${req.body.model}`);
+    console.log(`🚀 בדיקה ישירה עם מפתח קשיח`);
     
-    const API_KEY = (process.env.GEMINI_API_KEY || "").trim();
-    if (!API_KEY) return res.status(500).json({ error: "No API Key" });
+    try {
+        const { brand, model, year } = req.body;
+        
+        // משתמשים במודל gemini-1.5-flash
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        
+        const response = await axios.post(url, {
+            contents: [{ parts: [{ 
+                text: `Analyze car: ${brand} ${model} ${year}. Return JSON: {"reliability_score": 85, "summary": "Car summary", "common_faults": ["Fault1", "Fault2"], "pros": ["Pro1", "Pro2"]}` 
+            }] }]
+        });
+        
+        let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        rawText = rawText.replace(/```json|```/g, '').trim();
+        
+        console.log("✅ הצלחה! המפתח הקשיח עבד.");
+        res.json({ success: true, aiAnalysis: JSON.parse(rawText) });
 
-    const prompt = `
-    Act as a car mechanic. Analyze: "${req.body.brand} ${req.body.model} ${req.body.year}". 
-    Return ONLY valid JSON (no markdown):
-    {
-        "reliability_score": (Integer 0-100), 
-        "summary": (Hebrew summary max 15 words), 
-        "common_faults": [(3 Hebrew faults)], 
-        "pros": [(2 Hebrew pros)]
-    }`;
-
-    // --- הלולאה החכמה: מנסה מודלים עד שאחד מצליח ---
-    for (const model of MODELS_TO_TRY) {
-        try {
-            console.log(`Trying model: ${model}...`);
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-            
-            const response = await axios.post(url, { contents: [{ parts: [{ text: prompt }] }] });
-            
-            let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-            rawText = rawText.replace(/```json|```/g, '').trim();
-            
-            console.log(`✅ הצלחה עם ${model}!`);
-            return res.json({ success: true, aiAnalysis: JSON.parse(rawText) }); // יציאה מהפונקציה ברגע שיש הצלחה
-
-        } catch (error) {
-            console.warn(`⚠️ נכשל עם ${model} (שגיאה: ${error.response?.status || error.message}). מנסה את הבא...`);
-            // ממשיך למודל הבא בלולאה
-        }
+    } catch (error) {
+        console.error("❌ שגיאה:", error.response?.data || error.message);
+        // מחזיר את השגיאה האמיתית לדפדפן כדי שתראה אותה
+        res.status(500).json({ error: error.message, details: error.response?.data });
     }
-
-    // --- אם הגענו לפה, כל המודלים נכשלו ---
-    console.error("❌ כל המודלים נכשלו.");
-    res.json({ 
-        success: true, 
-        aiAnalysis: {
-            reliability_score: 80,
-            summary: "לא ניתן היה להתחבר ל-AI כרגע, אך זהו רכב פופולרי.",
-            common_faults: ["בלאי טבעי", "חיישנים"],
-            pros: ["חלפים זמינים", "שוק טוב"]
-        }
-    });
 });
 
 const PORT = process.env.PORT || 10000;
