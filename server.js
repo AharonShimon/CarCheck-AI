@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // --- הדבק את המפתח שלך כאן ---
-const API_KEY = "הדבק_כאן_את_המפתח_הארוך_שלך"; 
+const API_KEY = "AIzaSyD4OS_qtVQIfJXlbYZFHqE_71QMBkGZx3s"; 
 
 // 1. נתיב הניתוח הרגיל (ננסה מודל סופר-בסיסי בינתיים)
 app.post('/analyze-ai', async (req, res) => {
@@ -58,3 +58,4 @@ app.get('/scan', async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
