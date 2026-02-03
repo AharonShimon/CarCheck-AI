@@ -13,22 +13,23 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- נתיב ה-AI המדויק שעבד ---
+// נתיב ה-AI המתוקן - משתמש בשם מודל שקיים אצלך (gemini-2.0-flash)
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
     try {
-        // שימוש בכתובת המדויקת שעבדה בבדיקה הראשונה
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        // שימוש במודל שווידאנו שקיים ברשימה שלך בבדיקה הקודמת
+        const modelName = "gemini-2.0-flash"; 
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${API_KEY}`;
         
-        const prompt = `אתה מומחה רכב בכיר. נתח את הרכב: ${brand} ${model} שנת ${year}.
+        const prompt = `אתה מומחה רכב. נתח את הרכב: ${brand} ${model} שנת ${year}. 
         תן סיכום מקצועי בעברית (עד 5 שורות):
-        1. ציון אמינות משוער (⭐).
-        2. שלוש "מחלות דגם" נפוצות שחובה לבדוק.
-        3. האם הרכב מומלץ לקנייה?`;
+        1. ציון אמינות (⭐).
+        2. שלוש "מחלות דגם" נפוצות.
+        3. האם מומלץ?`;
 
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: prompt }] }]
-        }, { timeout: 10000 });
+        });
 
         if (response.data && response.data.candidates) {
             const aiText = response.data.candidates[0].content.parts[0].text;
@@ -37,12 +38,13 @@ app.post('/analyze-ai', async (req, res) => {
             throw new Error("Empty AI response");
         }
     } catch (error) {
-        console.error("AI Error Status:", error.response ? error.response.status : "No Response");
+        // הדפסת השגיאה ללוג של Render כדי שנדע אם חזר ה-429
+        console.error("AI Error:", error.response ? error.response.status : error.message);
         res.status(500).json({ success: false, error: "AI_FAILED" });
     }
 });
 
-// --- נתיב בדיקה למשרד התחבורה (Proxy) ---
+// נתיב הגיבוי למשרד התחבורה
 app.post('/get-car-details', async (req, res) => {
     const { plate } = req.body;
     try {
@@ -57,4 +59,4 @@ app.post('/get-car-details', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server LIVE`));
+app.listen(PORT, () => console.log(`Server LIVE and using gemini-2.0-flash`));
