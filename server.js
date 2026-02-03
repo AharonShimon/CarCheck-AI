@@ -6,56 +6,60 @@ const path = require('path');
 
 const app = express();
 
-// הגדרות אבטחה וגישה
+// הגדרות אבטחה
 app.use(cors());
 app.use(express.json());
-
-// הגשת קבצים סטטיים (האתר עצמו)
 app.use(express.static(path.join(__dirname)));
 
-// נתיב ראשי
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// נתיב ראשי - מגיש את האתר
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// --- שים לב! כאן אתה מדביק את המפתח הארוך שלך ---
+// --- שים לב: כאן מדביקים את המפתח שלך! ---
 const API_KEY = "AIzaSyD4OS_qtVQIfJXlbYZFHqE_71QMBkGZx3s"; 
 
 app.post('/analyze-ai', async (req, res) => {
-    console.log(`🚀 בקשה חדשה עבור רכב: ${req.body.brand} ${req.body.model}`);
+    console.log(`🚀 בקשה חדשה: ${req.body.brand} ${req.body.model} (${req.body.year})`);
     
     try {
         const { brand, model, year } = req.body;
         
-        // שימוש במודל Gemini 2.5 Flash (שנמצא ברשימה שלך)
+        // שימוש במודל Gemini 2.5 Flash (הכי חדש ומהיר שפתוח לך)
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
+        // ההנחיה ל-AI: "תחפש מחלות כרוניות ותקלות סדרתיות"
+        const smartPrompt = `
+        Act as a senior vehicle inspector in Israel. 
+        Your task is to identify known "chronic diseases" and common failures reported by users online for the: 
+        "${brand} ${model} year ${year}".
+
+        Do NOT provide generic advice like "check tires". 
+        Focus on SPECIFIC engine/transmission/electric faults known for this specific model year.
+
+        Return ONLY valid JSON in this format (Hebrew):
+        {
+            "reliability_score": (Integer 0-100 based on known reliability history), 
+            "summary": (A harsh and honest summary in Hebrew, max 15 words), 
+            "common_faults": [
+                "תקלה 1 (למשל: מחלת גיר DSG, סדקים בבוכנות, מודול מצתים)",
+                "תקלה 2 (משהו ספציפי לדגם)",
+                "תקלה 3"
+            ], 
+            "pros": ["יתרון 1", "יתרון 2"]
+        }`;
+
         const response = await axios.post(url, {
-            contents: [{ parts: [{ 
-                text: `You are an expert car mechanic in Israel. 
-                Analyze this car: "${brand} ${model} year ${year}". 
-                
-                Return ONLY valid JSON in this specific format (do not use markdown blocks):
-                {
-                    "reliability_score": (Integer between 0-100), 
-                    "summary": (Short Hebrew summary, max 15 words), 
-                    "common_faults": [(Array of 3 common faults in Hebrew)], 
-                    "pros": [(Array of 2 pros in Hebrew)]
-                }` 
-            }] }]
+            contents: [{ parts: [{ text: smartPrompt }] }]
         });
         
-        // חילוץ וניקוי התשובה
+        // ניקוי התשובה מסימנים מיותרים
         let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        // מנקה סימנים כמו ```json אם ה-AI מוסיף אותם בטעות
         rawText = rawText.replace(/```json|```/g, '').trim();
         
-        console.log("✅ הצלחה! התקבל ניתוח מגוגל.");
+        console.log("✅ הדו\"ח נוצר בהצלחה ונשלח לאתר.");
         res.json({ success: true, aiAnalysis: JSON.parse(rawText) });
 
     } catch (error) {
         console.error("❌ שגיאה:", error.response?.data || error.message);
-        // מחזיר תשובה מסודרת במקרה של שגיאה כדי שהלקוח יבין
         res.status(500).json({ error: "AI Error", details: error.message });
     }
 });
