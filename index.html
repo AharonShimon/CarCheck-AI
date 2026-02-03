@@ -28,17 +28,14 @@
 
         .container { padding: 30px 20px; width: 100%; max-width: 450px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
 
-        /* כותרות ולוגו */
         header { text-align: center; margin-bottom: 30px; width: 100%; }
         header h1 { font-size: 26px; font-weight: 900; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
         header h1 span { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
 
-        /* לוחית רישוי */
         .plate-box { background: #ffc400; padding: 4px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px; width: 100%; max-width: 320px; }
         .plate-inner { border: 2px solid #000; border-radius: 7px; display: flex; align-items: center; padding: 6px; }
         .plate-input { background: none; border: none; font-size: 38px; font-weight: 900; width: 100%; text-align: center; outline: none; letter-spacing: 4px; font-family: monospace; color: #000; }
 
-        /* שדות בחירה (Pickers) */
         .field-group { margin-bottom: 22px; width: 100%; display: flex; flex-direction: column; align-items: center; position: relative; }
         label { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; width: 100%; text-align: center; }
         
@@ -52,7 +49,6 @@
         .selector-trigger:after { content: '▼'; font-size: 10px; color: var(--accent); position: absolute; left: 20px; }
         .selector-trigger.active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
 
-        /* חלונית הגריד */
         .popup-grid {
             display: none; position: absolute; top: 100%; left: 0; right: 0;
             background: #111827; border: 1px solid var(--accent); border-radius: 16px;
@@ -74,14 +70,11 @@
             background: var(--gradient); box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3); margin-top: 10px; text-align: center;
         }
 
-        /* תוצאות AI */
         .ai-panel { margin-top: 35px; display: none; width: 100%; text-align: center; }
         .ai-card { background: var(--bg-glass); padding: 20px; border-radius: 16px; border-bottom: 4px solid var(--accent); margin-bottom: 15px; }
 
-        /* צ'ק ליסט משופר */
         #screen-check { display: none; width: 100%; flex-direction: column; align-items: center; }
         
-        /* לוגו יצרן */
         .brand-logo-container { width: 100%; display: flex; justify-content: center; margin-bottom: 15px; }
         .brand-logo-img { height: 60px; width: auto; filter: drop-shadow(0 0 10px var(--accent-glow)); }
         
@@ -101,7 +94,6 @@
         
         .item-text-wrapper { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
         
-        /* טולטיפ */
         .info-bubble {
             width: 24px; height: 24px; background: rgba(0, 240, 255, 0.1);
             border: 1px solid var(--accent); border-radius: 50%;
@@ -110,7 +102,6 @@
         }
         .tooltip-box { display: none; width: 100%; background: #111827; padding: 15px; border-radius: 12px; font-size: 13px; color: var(--text-dim); margin-top: -5px; margin-bottom: 15px; border: 1px solid var(--accent); line-height: 1.5; text-align: right; }
 
-        /* הודעת כשל AI מיושרת לשמאל */
         .ai-fail-box { display: none; width: 100%; justify-content: flex-start; padding: 10px; background: rgba(255, 59, 59, 0.1); border-radius: 8px; margin-bottom: 20px; align-items: center; gap: 10px; color: var(--danger); font-weight: 700; font-size: 13px; box-sizing: border-box; }
 
         #loader { display: none; position: fixed; inset: 0; background: var(--bg-deep); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
@@ -181,10 +172,69 @@
     <button class="btn-main" onclick="location.reload()">בדיקה חדשה</button>
 </div>
 
-<script src="cars.js"></script>
-
 <script>
-// מיפוי לוגואים (לא חובה לכל רכב, משמש לתצוגה)
+// === מאגר הרכבים המלא (מוטמע בפנים כדי למנוע שגיאות טעינה) ===
+const carDatabase = {
+    "טויוטה": ["קורולה", "קורולה קרוס", "יאריס", "יאריס קרוס", "RAV4", "C-HR", "לנד קרוזר", "היילקס", "קאמרי", "פריוס", "פריוס פלוס", "אייגו", "אייגו X", "היילנדר", "סיינה", "סולארה", "bZ4X", "GR יאריס", "GT86", "סופרה", "פרו-אייס", "פרו-אייס סיטי"],
+    "יונדאי": ["i10", "i20", "i20N", "i25", "i30", "i30N", "i35", "איוניק", "איוניק 5", "איוניק 6", "טוסון", "סנטה פה", "פליסייד", "אלנטרה", "קונה", "קונה EV", "סונטה", "ווניו", "גטס", "אקסנט", "ולוסטר", "סטאריה", "H1", "אלקזר", "באיון"],
+    "קיה": ["פיקנטו", "ריו", "ספורטאז'", "נירו", "נירו פלוס", "נירו EV", "סטוניק", "סורנטו", "קרניבל", "פורטה", "סלטוס", "EV6", "EV9", "סיד", "אופטימה", "סול", "פרו-סיד", "סטינגר", "אקס-סיד", "טלורייד", "קארנס", "מג'נטיס"],
+    "מאזדה": ["2", "2 דמיו", "3", "6", "CX-3", "CX-5", "CX-30", "CX-60", "CX-9", "CX-90", "MX-5 מיאטה", "MX-30", "CX-50", "5"],
+    "סקודה": ["אוקטביה", "סופרב", "קאמיק", "קארוק", "קודיאק", "פאביה", "סקאלה", "אנייאק", "אנייאק קופה", "ראפיד", "ייטי", "סיטיגו", "רומסטר"],
+    "סיאט": ["איביזה", "לאון", "לאון קופרה", "ארונה", "אטקה", "טראקו", "מי", "אלתאה", "טולדו"],
+    "פולקסווגן": ["גולף", "גולף GTI", "פולו", "טיגואן", "טיגואן אולספייס", "פסאט", "ג'טה", "T-Roc", "T-Cross", "ID.3", "ID.4", "ID.5", "ID.Buzz", "חיפושית", "שירוקו", "טוראן", "טוארג", "אמארוק", "קאדי", "טרנספורטר", "מולטיוואן", "ארטאון", "אפ!"],
+    "הונדה": ["סיוויק", "סיוויק טייפ R", "ג'אז", "CR-V", "HR-V", "אקורד", "אינסייט", "FR-V", "ZR-V", "פיילוט", "אודיסיי", "לג'נד", "S2000"],
+    "ניסאן": ["מיקרה", "ג'וק", "קשקאי", "אקס-טרייל", "סנטרה", "אלמרה", "ליף", "נואט", "נבארה", "מקסימה", "אלטימה", "370Z", "GT-R", "פאת'פיינדר", "ארי המדבר", "NV200", "ליף", "אריאה"],
+    "סוזוקי": ["סוויפט", "סוויפט ספורט", "איגניס", "ויטארה", "ג'ימני", "SX4", "SX4 קרוסאובר", "באלנו", "סלריו", "אלטו", "ספלאש", "גרנד ויטארה", "ליאנה"],
+    "מיצובישי": ["אאוטלנדר", "אאוטלנדר PHEV", "אקליפס קרוס", "ASX", "ספייס סטאר", "אטראז'", "לאנסר", "האנטר (טרייטון)", "פאג'רו", "פאג'רו ספורט", "גרנדיס", "קולט"],
+    "שברולט": ["ספארק", "קרוז", "מאליבו", "טראקס", "אקווינוקס", "טראוורס", "סילברדו", "קולורדו", "אימפלה", "בלייזר", "קאמרו", "קורבט", "סוניק", "אביאו", "אופטרה", "קפטיבה", "סוואנה", "טאהו", "סברבן", "בולט", "בולט EUV"],
+    "פורד": ["פוקוס", "פיאסטה", "פיאסטה ST", "פומה", "אקספלורר", "אדג'", "מונדאו", "מוסטנג", "מוסטנג מאך-E", "ברונקו", "ריינג'ר", "רפטור", "F-150", "F-350", "קוגה", "S-Max", "גלקסי", "C-Max", "טורנאו", "טרנזיט", "אקונוליין"],
+    "פיג'ו": ["108", "208", "2008", "3008", "5008", "308", "308 GTI", "508", "408", "פרטנר", "ריפטר", "בוקסר", "טראוולר", "RCZ", "107", "206", "207", "407", "לנדטרק"],
+    "רנו": ["קליאו", "מגאן", "מגאן גרנד קופה", "מגאן E-Tech", "קפצ'ור", "ארקנה", "אוסטרל", "קולאוס", "קדג'אר", "זואי", "טווינגו", "קנגו", "טראפיק", "מאסטר", "פלואנס", "סניק", "גרנד סניק", "לוגאן", "סימבול"],
+    "סיטרואן": ["C3", "C3 איירקרוס", "C4", "C4 X", "C5 איירקרוס", "C5 X", "ברלינגו", "ג'אמפי", "C1", "קקטוס", "C-Elysee", "פיקסו", "C4 פיקאסו", "גרנד פיקאסו", "DS3", "DS4", "DS5"],
+    "אופל": ["קורסה", "אסטרה", "מוקה", "קרוסלנד", "גרנדלנד", "אינסיגניה", "זפירה", "אדם", "קארל", "מריבה", "ויוארו", "קומבו", "מוקה-e", "קורסה-e"],
+    "ב.מ.וו": ["סדרה 1", "סדרה 2", "סדרה 3", "סדרה 4", "סדרה 5", "סדרה 7", "סדרה 8", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "XM", "iX", "i4", "iX3", "i7", "iX1", "Z4", "M2", "M3", "M4", "M5", "i3", "i8"],
+    "מרצדס": ["A-Class", "B-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLC Coupe", "GLE", "GLE Coupe", "GLS", "G-Class", "EQA", "EQB", "EQC", "EQE", "EQS", "V-Class", "ספרינטר", "ויטו", "SITAN", "SL", "AMG GT", "Maybach"],
+    "אאודי": ["A1", "A3", "S3", "RS3", "A4", "RS4", "A5", "RS5", "A6", "RS6", "A7", "RS7", "A8", "Q2", "Q3", "Q4 e-tron", "Q5", "Q7", "Q8", "e-tron", "e-tron GT", "TT", "R8", "SQ5", "SQ7", "SQ8"],
+    "וולוו": ["XC40", "XC60", "XC90", "S60", "S90", "V60", "V90", "V40", "C40", "EX30", "EX90", "EM90"],
+    "לקסוס": ["CT200h", "IS300h", "ES300h", "NX300h", "NX450h+", "RX450h", "RX500h", "UX250h", "UX300e", "LS500h", "LC500", "RZ450e", "GX", "LX", "RC", "LM"],
+    "סובארו": ["אימפרזה", "XV", "קרוסטרק", "פורסטר", "אאוטבק", "B4", "לוורג'", "Evoltis", "BRZ", "WRX STI", "טריבקה"],
+    "ג'נסיס": ["G70", "G80", "G90", "GV60", "GV70", "GV80"],
+    "אלפא רומיאו": ["ג'ולייטה", "מיטו", "ג'וליה", "סטלביו", "טונאלה", "159", "בררה", "4C"],
+    "דאצ'יה": ["דאסטר", "סנדרו", "סנדרו סטפווי", "ג'וגר", "לודג'י", "דוקר", "ספרינג", "לוגאן MCV"],
+    "פיאט": ["500", "500e", "500X", "500L", "טיפו", "פנדה", "דובלו", "פונטו", "בראבו", "124 ספיידר", "דוקאטו", "פיורינו", "קובו", "סקודו", "פולבק"],
+    "ג'יפ": ["רנגייד", "קומפאס", "צ'ירוקי", "גרנד צ'ירוקי", "רנגלר", "גלדיאטור", "אוונג'ר", "פטריוט", "קומנדר", "ואגוניר"],
+    "לנד רובר": ["דיסקברי", "דיסקברי ספורט", "ריינג' רובר", "ריינג' רובר ספורט", "איווק", "ולאר", "דיפנדר"],
+    "פורשה": ["מקאן", "קאיין", "פנמרה", "טייקן", "718 בוקסטר", "718 קאיימן", "911", "קאיין קופה"],
+    "טסלה": ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"],
+    "BYD": ["Atto 3", "Dolphin", "Seal", "Tang", "Han", "Seal U"],
+    "ג'ילי": ["Geometry C"],
+    "צ'רי": ["FX", "Tiggo 7 Pro", "Tiggo 8 Pro", "Tiggo 8 Pro e+"],
+    "MG": ["MG3", "MG ZS", "MG ZS EV", "MG4", "MG5", "Marvel R", "EHS (PHEV)", "Cyberster", "MG350"],
+    "Zeekr": ["001", "X", "009"],
+    "XPeng": ["P7", "G9"],
+    "Voyah": ["Free", "Dream"],
+    "Hongqi": ["E-HS9"],
+    "Aiways": ["U5", "U6"],
+    "Seres": ["3", "5", "7"],
+    "Skywell": ["ET5", "XR5"],
+    "Ora": ["Funky Cat (03)", "07"],
+    "Maxus": ["Euniq 5", "Euniq 6", "eDeliver 3", "eDeliver 9"],
+    "Leapmotor": ["T03", "C11"],
+    "Lynk & Co": ["01"],
+    "DS": ["3", "3 Crossback", "4", "7 Crossback", "9"],
+    "קופרה": ["פורמנטור", "לאון", "אטקה", "בורן"],
+    "איסוזו": ["D-Max", "Sumo"],
+    "סאנגיונג (KGM)": ["רקסטון", "קוראנדו", "טיבולי", "מוסו", "טורס", "רודיוס"],
+    "דייהטסו": ["סיריון", "טריוס", "מאטריה", "שרייד", "קורה"],
+    "סמארט": ["Fortwo", "Forfour", "#1", "#3"],
+    "מיני": ["One", "Cooper", "Cooper S", "Countryman", "Clubman", "Cabrio", "JCW", "Cooper SE"],
+    "יגואר": ["XE", "XF", "XJ", "E-Pace", "F-Pace", "I-Pace", "F-Type"],
+    "קאדילק": ["CT4", "CT5", "XT4", "XT5", "XT6", "אסקלייד", "ליריק", "ATS", "CTS", "SRX"],
+    "אינפיניטי": ["Q30", "Q50", "Q60", "Q70", "QX30", "QX50", "QX55", "QX60", "QX70", "QX80", "G37"],
+    "אבארט": ["500", "595", "695", "124 Spider", "500e"]
+};
+
+// מיפוי לוגואים
 const brandMap = {
     "מאזדה": "mazda", "טויוטה": "toyota", "יונדאי": "hyundai", "קיה": "kia", 
     "שברולט": "chevrolet", "סובארו": "subaru", "פורד": "ford", "סוזוקי": "suzuki", 
@@ -248,13 +298,8 @@ window.handlePicker = function(type) {
 };
 
 function renderBrands() {
-    // בדיקת הגנה אם המאגר לא נטען
-    if (typeof carDatabase === 'undefined') {
-        alert("שגיאה: קובץ cars.js חסר!");
-        return;
-    }
     const g = document.getElementById('brand-grid'); g.innerHTML = '';
-    // שימוש במאגר הגדול
+    // שימוש במאגר המוטמע
     Object.keys(carDatabase).sort().forEach(b => {
         const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = b;
         d.onclick = (e) => { e.stopPropagation(); document.getElementById('val-b').value = b; document.getElementById('brand-trigger').innerText = b; document.getElementById('val-m').value = ''; document.getElementById('model-trigger').innerText = 'בחר דגם...'; closeAll(); };
@@ -264,7 +309,6 @@ function renderBrands() {
 
 function renderModels(b) {
     const g = document.getElementById('model-grid'); g.innerHTML = '';
-    // שימוש במאגר הגדול לדגמים
     if (carDatabase[b]) {
         carDatabase[b].sort().forEach(m => {
             const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = m;
