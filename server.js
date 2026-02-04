@@ -14,19 +14,37 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// === מערכת זיכרון (Cache) למניעת חסימות ===
-const optionsCache = {}; 
-
-// === בדיקת מפתח ===
+// בדיקת מפתח
 if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. Gemini 2.5 Flash ready.");
+else console.log("✅ Server started. Key loaded.");
 
-// === פונקציות ניקוי ===
+// === פונקציית ניקוי חכמה ===
+function cleanAndParseJSON(text) {
+    try {
+        // מנקה Markdown ורווחים
+        let clean = text.replace(/```json|```/g, '').trim();
+        
+        // מוצא את האובייקט JSON הראשון והאחרון
+        const startObj = clean.indexOf('{');
+        const endObj = clean.lastIndexOf('}');
+        
+        if (startObj !== -1 && endObj !== -1) {
+            clean = clean.substring(startObj, endObj + 1);
+        }
+        
+        return JSON.parse(clean);
+    } catch (e) {
+        console.error("⚠️ Failed to parse JSON:", text);
+        return null; // מחזיר NULL במקרה כישלון
+    }
+}
+
 function cleanAndParseArray(text) {
     try {
         let clean = text.replace(/```json|```/g, '').trim();
         const startArr = clean.indexOf('[');
         const endArr = clean.lastIndexOf(']');
+        
         if (startArr !== -1 && endArr !== -1) {
             clean = clean.substring(startArr, endArr + 1);
         }
@@ -36,70 +54,31 @@ function cleanAndParseArray(text) {
     }
 }
 
-function cleanAndParseJSON(text) {
-    try {
-        let clean = text.replace(/```json|```/g, '').trim();
-        const startObj = clean.indexOf('{');
-        const endObj = clean.lastIndexOf('}');
-        if (startObj !== -1 && endObj !== -1) {
-            clean = clean.substring(startObj, endObj + 1);
-        }
-        return JSON.parse(clean);
-    } catch (e) {
-        return null;
-    }
-}
-
-// === נתיב 1: שליפת תתי-דגם (עם זיכרון!) ===
+// === נתיב 1: דגמים ===
 app.post('/get-car-options', async (req, res) => {
-    const { brand, model } = req.body;
-    
-    // מפתח ייחודי לזיכרון (כדי שלא נשמור סתם "קורולה" בלי לדעת של מי)
-    const cacheKey = `${brand}-${model}`; 
-
-    // 1. בדיקה בזיכרון
-    if (optionsCache[cacheKey]) {
-        console.log(`⚡ שליפה מהירה מהזיכרון: ${brand} ${model}`);
-        return res.json({ success: true, options: optionsCache[cacheKey] });
-    }
-
-    // 2. פנייה לגוגל (רק אם אין בזיכרון)
     try {
-        console.log(`🤖 שולח בקשה ל-AI: ${brand} ${model}`);
-
-        // חזרנו ל-2.5 כי הוא עובד אצלך בוודאות
+        const { brand, model } = req.body;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        const prompt = `List all trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
+        const prompt = `List all trim levels for "${brand} ${model}" in Israel. Return ONLY JSON array. Example: ["1.6 Sun", "1.8 Hybrid"]`;
 
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
+            generationConfig: { temperature: 0.0 }
         });
 
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
         const options = cleanAndParseArray(rawText);
-
-        // 3. שמירה בזיכרון לעתיד
-        if (options.length > 0) {
-            optionsCache[cacheKey] = options;
-        }
         
         res.json({ success: true, options: options });
 
     } catch (error) {
-        // טיפול בעומס יתר (429)
-        if (error.response && error.response.status === 429) {
-            console.error("⏳ נגמרה מכסת הבקשות לדקה (429).");
-            return res.status(429).json({ success: false, error: "Too many requests, slow down." });
-        }
-        
-        console.error("❌ Error fetching options:", error.message);
+        console.error("Error fetching options:", error.message);
         res.json({ success: false, options: [] });
     }
 });
 
-// === נתיב 2: ניתוח מלא ===
+// === נתיב 2: ניתוח (התיקון הקריטי) ===
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
     console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
@@ -108,8 +87,15 @@ app.post('/analyze-ai', async (req, res) => {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const smartPrompt = `
-        Act as a strict Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}".
-        Return JSON ONLY: { "reliability_score": int, "summary": string, "common_faults": [], "pros": [], "cons": [] }`;
+        Act as an Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}".
+        Output JSON ONLY:
+        {
+            "reliability_score": 85, 
+            "summary": "Hebrew summary here", 
+            "common_faults": ["Fault 1", "Fault 2"], 
+            "pros": ["Pro 1"],
+            "cons": ["Con 1"]
+        }`;
 
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: smartPrompt }] }],
@@ -119,18 +105,17 @@ app.post('/analyze-ai', async (req, res) => {
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         const analysis = cleanAndParseJSON(rawText);
 
+        // === ההגנה מפני קריסה ===
         if (!analysis || !analysis.reliability_score) {
+            console.error("❌ AI returned invalid data");
             return res.json({ success: false, error: "AI Parsing Failed" });
         }
 
         res.json({ success: true, aiAnalysis: analysis });
 
     } catch (error) {
-        if (error.response && error.response.status === 429) {
-            return res.status(429).json({ error: "System busy (429)" });
-        }
         console.error("❌ AI Error:", error.message);
-        res.status(500).json({ error: "AI Failed" });
+        res.status(500).json({ error: "Connection Error" });
     }
 });
 
