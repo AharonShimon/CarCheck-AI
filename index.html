@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CarCheck AI Pro | Final Fixed</title>
+    <title>CarCheck AI Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet"> 
     <style>
         :root { --bg-deep:#0f172a; --bg-gradient-start:#0f172a; --bg-gradient-end:#1e293b; --card-bg:rgba(30,41,59,0.85); --card-border:rgba(148,163,184,0.15); --accent:#38bdf8; --accent-glow:rgba(56,189,248,0.3); --text-main:#f8fafc; --text-muted:#94a3b8; --danger:#ef4444; --success:#10b981; --plate-yellow:#facc15; }
         body { font-family: 'Heebo', sans-serif; background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%); color: var(--text-main); margin: 0; direction: rtl; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
@@ -68,7 +67,7 @@
     <div class="plate-box"><div class="plate-inner"><input id="plate" class="plate-input" type="tel" placeholder="00000000" maxlength="8"></div></div>
     
     <div class="field-group">
-        <label>יצרן רכב</label>
+        <label>1. יצרן רכב</label>
         <div id="brand-trigger" class="selector-trigger" onclick="window.handlePicker('brand')"><span>🚘 בחר יצרן...</span> <span class="arrow">▼</span></div>
         <div id="brand-popup" class="popup-grid">
             <input type="text" class="search-input" placeholder="חפש יצרן..." onkeyup="window.filterGrid('brand', this.value)">
@@ -78,7 +77,7 @@
     </div>
 
     <div class="field-group">
-        <label>דגם</label>
+        <label>2. דגם</label>
         <div id="model-trigger" class="selector-trigger disabled" onclick="window.handlePicker('model')"><span>🏎️ בחר דגם...</span> <span class="arrow">▼</span></div>
         <div id="model-popup" class="popup-grid">
             <input type="text" class="search-input" placeholder="חפש דגם..." onkeyup="window.filterGrid('model', this.value)">
@@ -88,16 +87,7 @@
     </div>
 
     <div class="field-group">
-        <label>תת-דגם (נטען מה-AI)</label>
-        <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר תת-דגם...</span> <span class="arrow">▼</span></div>
-        <div id="submodel-popup" class="popup-grid">
-            <div id="submodel-grid" class="grid-layout"></div>
-        </div>
-        <input type="hidden" id="val-s">
-    </div>
-
-    <div class="field-group">
-        <label>שנת ייצור</label>
+        <label>3. שנת ייצור</label>
         <div id="year-trigger" class="selector-trigger disabled" onclick="window.handlePicker('year')"><span>📅 בחר שנה...</span> <span class="arrow">▼</span></div>
         <div id="year-popup" class="popup-grid">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; padding:0 10px; font-weight:bold; color:var(--accent);">
@@ -107,9 +97,18 @@
         </div>
         <input type="hidden" id="val-y">
     </div>
+
+    <div class="field-group">
+        <label>4. תת-דגם (נטען מה-AI לפי השנה)</label>
+        <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר תת-דגם...</span> <span class="arrow">▼</span></div>
+        <div id="submodel-popup" class="popup-grid">
+            <div id="submodel-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-s">
+    </div>
     
     <button class="btn-main" onclick="window.startDeepAI()">🚀 נתח נתונים ב-AI</button>
-    <button class="btn-main btn-outline" onclick="window.goToChecklist()">📋 דלג לבדיקה</button>
+    <button class="btn-main btn-outline" onclick="window.goToChecklist()">📋 דלג לבדיקה ידנית</button>
     <div id="ai-panel" style="margin-top: 30px;"></div>
 </div>
 
@@ -131,7 +130,7 @@
 </div>
 
 <script>
-// === מאגר מקומי (Hardcoded) ליצרנים ודגמים ===
+// === 1. מאגר יצרנים ודגמים מקומי ===
 const carData = {
     "טויוטה": ["קורולה", "יאריס", "RAV4", "C-HR", "לנד קרוזר", "פריוס", "היילקס", "קאמרי", "אייגו X"],
     "יונדאי": ["i10", "i20", "i30", "איוניק 5", "איוניק 6", "טוסון", "סנטה פה", "קונה", "אלנטרה", "באיון", "סונטה"],
@@ -146,12 +145,12 @@ const carData = {
     "מיצובישי": ["אאוטלנדר", "ASX", "ספייס סטאר", "אקליפס קרוס", "טריטון", "לנסר"],
     "ניסאן": ["קשקאי", "ג'וק", "אקסטרייל", "מיקרה", "סנטרה"],
     "שברולט": ["ספארק", "טראוורס", "אקווינוקס", "בלייזר", "סילברדו", "מאליבו", "קרוז", "טראקס"],
-    "BYD": ["Atto 3", "Dolphin", "Seal", "Tang", "Han"],
+    "BYD": ["Atto 3", "Dolphin", "Seal"],
     "ג'ילי": ["Geometry C"],
-    "MG": ["MG4", "ZS EV", "EHS", "Marvel R", "MG3", "MG5"],
+    "MG": ["MG4", "ZS EV", "EHS", "Marvel R", "MG3"],
     "טסלה": ["Model 3", "Model Y", "Model S", "Model X"],
     "צ'רי": ["FX", "Tiggo 7 Pro", "Tiggo 8 Pro"],
-    "אאודי": ["A1", "A3", "A4", "A5", "A6", "Q2", "Q3", "Q5", "Q7", "e-tron"],
+    "אאודי": ["A1", "A3", "A4", "A5", "A6", "Q2", "Q3", "Q5", "Q7"],
     "ב.מ.וו": ["סדרה 1", "סדרה 3", "סדרה 5", "X1", "X3", "X5", "X6"],
     "מרצדס": ["A-Class", "C-Class", "E-Class", "GLA", "GLC", "GLE"],
     "פיג'ו": ["208", "2008", "3008", "5008", "308"],
@@ -159,7 +158,7 @@ const carData = {
     "סיטרואן": ["C3", "C4", "C5 Aircross", "ברלינגו"]
 };
 
-// === 35 בדיקות שטח מלאות (כולל NotOK) ===
+// === 2. צ'קליסט מלא (35 סעיפים) ===
 const checklistData = [
     {
         category: "🔩 מנוע ומערכת קירור (קריטי)",
@@ -230,44 +229,44 @@ window.handlePicker = async function(type) {
     if (trigger.classList.contains('disabled')) return;
     
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(type + '-popup');
-    target.classList.add('active');
+    document.getElementById(type + '-popup').classList.add('active');
 
     const grid = document.getElementById(type + '-grid');
-    if (grid.children.length > 0 && type !== 'year') return;
+    if (grid.children.length > 0 && type !== 'year' && type !== 'submodel') return;
 
     if (type === 'brand') {
         renderGrid('brand', Object.keys(carData));
     } else if (type === 'model') {
         const brand = document.getElementById('val-b').value;
         renderGrid('model', carData[brand] || []);
-    } else if (type === 'submodel') {
-        const brand = document.getElementById('val-b').value;
-        const model = document.getElementById('val-m').value;
-        await fetchOptions('submodels', brand, model, grid);
     } else if (type === 'year') {
         renderYears();
+    } else if (type === 'submodel') {
+        // === שולחים את השנה יחד עם היצרן והדגם ===
+        const brand = document.getElementById('val-b').value;
+        const model = document.getElementById('val-m').value;
+        const year = document.getElementById('val-y').value;
+        await fetchOptions(brand, model, year, grid);
     }
 };
 
-async function fetchOptions(type, brand, model, gridElement) {
+async function fetchOptions(brand, model, year, gridElement) {
     gridElement.innerHTML = '<div class="grid-loader"><div class="orbit" style="width:20px;height:20px;border-width:2px;"></div> טוען מ-AI...</div>';
     try {
         const res = await fetch('/get-car-options', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, brand, model })
+            body: JSON.stringify({ brand, model, year }) // שליחת השנה!
         });
         const data = await res.json();
         
         if (data.success && Array.isArray(data.options)) {
             renderGrid('submodel', data.options, gridElement);
         } else {
-            gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:10px;">לא נמצאו תוצאות.</div>';
+            gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;">לא נמצאו דגמים.</div>';
         }
     } catch (e) {
-        console.error(e);
-        gridElement.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;font-size:12px;">שגיאת תקשורת: ${e.message}</div>`;
+        gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:red;">שגיאת תקשורת</div>';
     }
 }
 
@@ -276,20 +275,16 @@ function renderGrid(type, items, targetElement = null) {
     g.innerHTML = '';
     
     const manualInput = document.querySelector(`#${type}-popup input`);
-    if (manualInput && manualInput.value.length > 0) {
+    if (manualInput && manualInput.value) {
         const d = document.createElement('div'); d.className = 'grid-item manual-entry'; d.style.gridColumn = "1/-1";
-        d.innerHTML = `השתמש ב: "${manualInput.value}" ➕`;
+        d.innerHTML = `הוסף: "${manualInput.value}" ➕`;
         d.onclick = () => selectItem(type, manualInput.value);
         g.appendChild(d);
     }
 
-    if (!items || items.length === 0) {
-        if(!targetElement) g.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;">הקלד כדי להוסיף...</div>';
-        return;
-    }
+    if (!items || items.length === 0) return;
 
-    items.sort();
-    items.forEach(item => {
+    items.sort().forEach(item => {
         const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = item;
         d.onclick = () => selectItem(type, item);
         g.appendChild(d);
@@ -301,41 +296,30 @@ function selectItem(type, value) {
     document.getElementById(type + '-trigger').innerHTML = `<span>${value}</span> <span class="arrow">▼</span>`;
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
 
-    // === לוגיקת האיפוס המתוקנת ===
+    // === לוגיקת איפוס חכמה ===
     if (type === 'brand') {
-        // איפוס דגם
-        resetField('model', '🏎️ בחר דגם...');
-        document.getElementById('model-trigger').classList.remove('disabled');
-        document.getElementById('model-grid').innerHTML = ''; 
-
-        // איפוס תת-דגם
-        resetField('submodel', '⚙️ בחר תת-דגם...');
-        document.getElementById('submodel-grid').innerHTML = '';
-
-        // איפוס שנה
+        resetField('model', '🏎️ בחר דגם...'); 
         resetField('year', '📅 בחר שנה...');
-    } 
-    else if (type === 'model') {
-        // איפוס תת-דגם
-        resetField('submodel', '⚙️ בחר תת-דגם...');
-        document.getElementById('submodel-trigger').classList.remove('disabled');
+        resetField('submodel', '⚙️ תת-דגם...');
+        enableField('model');
+    } else if (type === 'model') {
+        resetField('year', '📅 בחר שנה...');
+        resetField('submodel', '⚙️ תת-דגם...');
+        enableField('year'); 
+    } else if (type === 'year') {
+        resetField('submodel', '⚙️ תת-דגם...');
         document.getElementById('submodel-grid').innerHTML = ''; 
-
-        // איפוס שנה
-        resetField('year', '📅 בחר שנה...');
-    } 
-    else if (type === 'submodel') {
-        document.getElementById('year-trigger').classList.remove('disabled');
+        enableField('submodel'); 
     }
 }
 
-// פונקציית עזר לאיפוס שדה
 function resetField(type, ph) {
     document.getElementById('val-' + type.charAt(0)).value = '';
     const el = document.getElementById(type + '-trigger');
     el.innerHTML = `<span>${ph}</span> <span class="arrow">▼</span>`;
     el.classList.add('disabled');
 }
+function enableField(type) { document.getElementById(type + '-trigger').classList.remove('disabled'); }
 
 window.filterGrid = function(type, query) {
     const grid = document.getElementById(type + '-grid');
@@ -369,25 +353,23 @@ window.startDeepAI = async function() {
     if(!b || !m || !y) return alert("חסרים פרטים לניתוח");
     document.getElementById('loader').style.display = 'flex';
     
-    const fullModel = s ? `${m} ${s}` : m; 
-
     try {
         const res = await fetch('/analyze-ai', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ brand: b, model: fullModel, year: y }) 
+            body: JSON.stringify({ brand: b, model: `${m} ${s}`, year: y }) 
         });
         const data = await res.json();
-        if(data.success) {
+        if(data.success && data.aiAnalysis) {
             const ai = data.aiAnalysis;
             const p = document.getElementById('ai-panel'); p.style.display = 'block';
             p.innerHTML = `<div style="background:rgba(30, 41, 59, 0.9); padding:20px; border-radius:16px; margin-top:20px; border:1px solid var(--accent);">
-                <div style="font-size:48px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score}</div>
-                <p style="text-align:center; font-size:16px; margin-bottom:20px; font-weight:500;">${ai.summary}</p>
+                <div style="font-size:48px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score || 'N/A'}</div>
+                <p style="text-align:center; font-size:16px; margin-bottom:20px;">${ai.summary || ''}</p>
                 <div style="text-align:right;">
                     <div style="color:var(--success); font-weight:bold;">✅ יתרונות:</div>
                     <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.pros || []).map(p => `<li>${p}</li>`).join('')}</ul>
-                    <div style="color:var(--danger); font-weight:bold; margin-top:10px;">❌ תקלות נפוצות:</div>
+                    <div style="color:var(--danger); font-weight:bold; margin-top:10px;">❌ תקלות:</div>
                     <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.common_faults || []).map(c => `<li>${c}</li>`).join('')}</ul>
                 </div>
                 <button class="btn-main" onclick="window.goToChecklist()">המשך לבדיקה 🏁</button>
@@ -395,7 +377,7 @@ window.startDeepAI = async function() {
             p.scrollIntoView({ behavior: 'smooth' });
         }
     } catch(e) { 
-        alert("שגיאה בחיבור ל-AI: " + e.message); 
+        alert("שגיאה בחיבור ל-AI"); 
     } finally { 
         document.getElementById('loader').style.display = 'none'; 
     }
@@ -405,6 +387,7 @@ window.goToChecklist = function() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'flex';
     const content = document.getElementById('checklist-content'); content.innerHTML = '';
+    currentScore = 100;
     
     checklistData.forEach((cat, cIdx) => {
         content.innerHTML += `<div class="category-header"><span class="category-title">${cat.category}</span></div>`;
@@ -439,27 +422,21 @@ window.toggleCheck = (id, weight, name) => {
 window.finishCheck = () => {
     document.getElementById('screen-check').style.display = 'none';
     document.getElementById('screen-result').style.display = 'flex';
+    
     const score = Math.max(0, currentScore);
     const g = document.getElementById('final-gauge');
+    g.innerText = score;
     
-    let start = 0;
-    const animate = (ts) => {
-        if (!start) start = ts;
-        const prog = Math.min((ts - start) / 1000, 1);
-        g.innerText = Math.floor(prog * score);
-        if (prog < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-
-    let color = score > 85 ? "var(--success)" : (score > 60 ? "var(--accent)" : "var(--danger)");
+    let color = score > 85 ? "var(--success)" : (score > 60 ? "#facc15" : "var(--danger)");
     g.style.borderColor = color; g.style.boxShadow = `0 0 30px ${color}`;
     
     let txt = "רכב במצב מעולה!";
     if(score < 85) txt = "יש כמה ריג'קטים...";
     if(score < 60) txt = "לא לגעת ברכב!";
     
-    document.getElementById('result-text').innerText = txt;
-    document.getElementById('result-text').style.color = color;
+    const resText = document.getElementById('result-text');
+    resText.innerText = txt;
+    resText.style.color = color;
 
     const list = document.getElementById('defects-ul'); list.innerHTML = '';
     if (badItemsNames.length > 0) {
