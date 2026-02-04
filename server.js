@@ -14,57 +14,56 @@ app.use(express.static(path.join(__dirname)));
 // נתיב ראשי
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// קריאת המפתח מהכספת של Render
+// קריאת המפתח
 const API_KEY = process.env.GEMINI_API_KEY; 
 
 app.post('/analyze-ai', async (req, res) => {
-    console.log(`🚀 בקשה חדשה: ${req.body.brand} ${req.body.model} (${req.body.year})`);
+    console.log(`🚀 בקשה חדשה (Gemini 2.5): ${req.body.brand} ${req.body.model} (${req.body.year})`);
     
-    // בדיקת הגנה: אם המפתח לא הוגדר ב-Render
     if (!API_KEY) {
-        console.error("❌ שגיאה קריטית: חסר מפתח API בהגדרות השרת (Environment Variables)");
-        return res.status(500).json({ error: "Server Configuration Error: Missing API Key" });
+        console.error("❌ שגיאה: חסר מפתח API");
+        return res.status(500).json({ error: "Missing API Key" });
     }
 
     try {
         const { brand, model, year } = req.body;
         
-        // שימוש במודל (ניתן להחליף ל-gemini-1.5-flash אם 2.5 עושה בעיות, אבל נשאר עם מה שעבד לך)
+        // חזרנו למודל 2.5 כפי שביקשת
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        // --- זה החלק ששודרג ---
-        // הוספנו דרישה לסרוק את כל המנועים ולהחזיר גם חסרונות (cons)
         const smartPrompt = `
-        Act as a senior vehicle inspector in Israel. 
-        Analyze the reliability of: "${brand} ${model} year ${year}".
+        Act as a strict, expert vehicle inspector in Israel.
+        Analyze: "${brand} ${model} year ${year}".
 
-        CRITICAL INSTRUCTIONS:
-        1. Consider ALL common engine variants sold in Israel for this model year (e.g., 1.6L, 1.8L, 2.0L, Diesel, Hybrid, Turbo). Do NOT limit to just one engine type.
-        2. Identify "chronic diseases" specific to these engines/transmissions.
-        3. Provide specific Pros (יתרונות) AND Cons (חסרונות).
+        CRITICAL RULES:
+        1. Consistency is key. Do not invent faults.
+        2. Link faults to these physical checks if relevant: ["טחינה בשמן", "בועות במיכל עיבוי", "נשימת מנוע", "בוץ שמן", "רעידות", "נזילות"].
+        3. Output MUST be valid JSON only.
 
-        Return ONLY valid JSON in this format (Hebrew):
+        Return JSON Structure (Hebrew):
         {
-            "reliability_score": (Integer 0-100 based on known reliability history), 
-            "summary": (A harsh and honest summary in Hebrew, max 20 words. Mention if a specific engine is better/worse), 
-            "common_faults": [
-                "תקלה 1 (למשל: מחלת גיר DSG, סדקים בבוכנות, מודול מצתים)",
-                "תקלה 2 (נא לציין לאיזה מנוע זה רלוונטי אם צריך)",
-                "תקלה 3"
-            ], 
-            "pros": ["יתרון 1", "יתרון 2"],
-            "cons": ["חיסרון 1", "חיסרון 2"]
+            "reliability_score": (Integer 0-100), 
+            "summary": (Short summary in Hebrew), 
+            "common_faults": ["Fault 1", "Fault 2"], 
+            "pros": ["Pro 1", "Pro 2"],
+            "cons": ["Con 1", "Con 2"]
         }`;
 
         const response = await axios.post(url, {
-            contents: [{ parts: [{ text: smartPrompt }] }]
+            contents: [{ parts: [{ text: smartPrompt }] }],
+            // === התיקון הקריטי לדיוק: טמפרטורה 0 ===
+            generationConfig: {
+                temperature: 0.0, 
+                topP: 0.95,
+                topK: 40
+            }
         });
         
         let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        // ניקוי הקוד מסימנים מיותרים
+        // ניקוי יסודי של התשובה כדי למנוע שגיאות JSON
         rawText = rawText.replace(/```json|```/g, '').trim();
         
-        console.log("✅ הדו\"ח נוצר בהצלחה!");
+        console.log("✅ תשובה התקבלה בהצלחה");
         res.json({ success: true, aiAnalysis: JSON.parse(rawText) });
 
     } catch (error) {
