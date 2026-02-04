@@ -14,11 +14,14 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// === מערכת זיכרון (Cache) ===
-// כאן נשמור את כל הרשימות שה-AI כבר הביא, כדי לא לשאול שוב
+// === מערכת זיכרון (Cache) למניעת חסימות ===
 const optionsCache = {}; 
 
-// === פונקציות עזר ===
+// === בדיקת מפתח ===
+if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
+else console.log("✅ Server started. Gemini 2.5 Flash ready.");
+
+// === פונקציות ניקוי ===
 function cleanAndParseArray(text) {
     try {
         let clean = text.replace(/```json|```/g, '').trim();
@@ -50,20 +53,22 @@ function cleanAndParseJSON(text) {
 // === נתיב 1: שליפת תתי-דגם (עם זיכרון!) ===
 app.post('/get-car-options', async (req, res) => {
     const { brand, model } = req.body;
-    const cacheKey = `${brand}-${model}`; // מפתח ייחודי, למשל: "סיטרואן-ברלינגו"
+    
+    // מפתח ייחודי לזיכרון (כדי שלא נשמור סתם "קורולה" בלי לדעת של מי)
+    const cacheKey = `${brand}-${model}`; 
 
-    // 1. בדיקה האם זה כבר בזיכרון?
+    // 1. בדיקה בזיכרון
     if (optionsCache[cacheKey]) {
-        console.log(`⚡ שליפה מהיר מהזיכרון עבור: ${brand} ${model}`);
+        console.log(`⚡ שליפה מהירה מהזיכרון: ${brand} ${model}`);
         return res.json({ success: true, options: optionsCache[cacheKey] });
     }
 
-    // 2. אם לא בזיכרון - שולחים בקשה ל-AI
+    // 2. פנייה לגוגל (רק אם אין בזיכרון)
     try {
-        console.log(`🤖 שולח בקשה ל-AI עבור: ${brand} ${model}`);
+        console.log(`🤖 שולח בקשה ל-AI: ${brand} ${model}`);
 
-        // שימוש ב-1.5 Flash לרשימות (יותר מכסות בחינם, יותר מהיר)
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        // חזרנו ל-2.5 כי הוא עובד אצלך בוודאות
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const prompt = `List all trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
 
@@ -75,7 +80,7 @@ app.post('/get-car-options', async (req, res) => {
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
         const options = cleanAndParseArray(rawText);
 
-        // 3. שמירה בזיכרון לפעם הבאה!
+        // 3. שמירה בזיכרון לעתיד
         if (options.length > 0) {
             optionsCache[cacheKey] = options;
         }
@@ -83,11 +88,12 @@ app.post('/get-car-options', async (req, res) => {
         res.json({ success: true, options: options });
 
     } catch (error) {
-        // טיפול ספציפי בשגיאת 429
+        // טיפול בעומס יתר (429)
         if (error.response && error.response.status === 429) {
-            console.error("⏳ נגמרה המכסה (429). אנא המתן.");
-            return res.status(429).json({ success: false, error: "Too many requests" });
+            console.error("⏳ נגמרה מכסת הבקשות לדקה (429).");
+            return res.status(429).json({ success: false, error: "Too many requests, slow down." });
         }
+        
         console.error("❌ Error fetching options:", error.message);
         res.json({ success: false, options: [] });
     }
@@ -99,7 +105,6 @@ app.post('/analyze-ai', async (req, res) => {
     console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
     
     try {
-        // לניתוח נשארים עם 2.5 כי הוא חכם יותר
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const smartPrompt = `
@@ -122,8 +127,7 @@ app.post('/analyze-ai', async (req, res) => {
 
     } catch (error) {
         if (error.response && error.response.status === 429) {
-            console.error("⏳ 429 Too Many Requests - Analysis");
-            return res.status(429).json({ error: "System busy, try in 1 min" });
+            return res.status(429).json({ error: "System busy (429)" });
         }
         console.error("❌ AI Error:", error.message);
         res.status(500).json({ error: "AI Failed" });
