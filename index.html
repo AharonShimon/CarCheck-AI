@@ -3,60 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CarCheck AI Pro | Hybrid Speed</title>
+    <title>CarCheck AI Pro | Final Full</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet"> 
     <style>
-        /* --- עיצוב פרימיום זהה --- */
-        :root { --bg-deep:#0f172a; --bg-gradient-start:#0f172a; --bg-gradient-end:#1e293b; --card-bg:rgba(30,41,59,0.7); --card-border:rgba(148,163,184,0.1); --accent:#38bdf8; --accent-glow:rgba(56,189,248,0.3); --text-main:#f8fafc; --text-muted:#94a3b8; --danger:#ef4444; --success:#10b981; --plate-yellow:#facc15; }
+        :root { --bg-deep:#0f172a; --bg-gradient-start:#0f172a; --bg-gradient-end:#1e293b; --card-bg:rgba(30,41,59,0.85); --card-border:rgba(148,163,184,0.15); --accent:#38bdf8; --accent-glow:rgba(56,189,248,0.3); --text-main:#f8fafc; --text-muted:#94a3b8; --danger:#ef4444; --success:#10b981; --plate-yellow:#facc15; }
         body { font-family: 'Heebo', sans-serif; background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%); color: var(--text-main); margin: 0; direction: rtl; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-        .container { padding: 24px; width: 100%; max-width: 480px; box-sizing: border-box; padding-bottom: 100px; }
-        header { text-align: center; margin: 20px 0 35px 0; }
+        .container { padding: 24px; width: 100%; max-width: 480px; box-sizing: border-box; padding-bottom: 120px; }
+        header { text-align: center; margin: 20px 0 30px 0; }
         header h1 { font-size: 28px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         header h1 span { background: linear-gradient(to right, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px var(--accent-glow); }
-        .plate-box { background: var(--plate-yellow); padding: 4px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: 0 auto 30px auto; width: 100%; max-width: 320px; position: relative; }
+        .plate-box { background: var(--plate-yellow); padding: 4px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin: 0 auto 30px auto; width: 100%; max-width: 320px; position: relative; }
         .plate-inner { border: 3px solid #1e293b; border-radius: 8px; display: flex; align-items: center; padding: 0 10px; height: 60px; background: var(--plate-yellow); }
         .plate-inner::before { content: "IL"; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; width: 25px; height: 100%; background: #003399; border-radius: 4px 0 0 4px; margin-left: 10px; }
-        .plate-input { background: none; border: none; font-size: 40px; font-weight: 800; width: 100%; text-align: center; outline: none; letter-spacing: 6px; font-family: monospace; color: #1e293b; height: 100%; padding-top: 5px; }
+        .plate-input { background: none; border: none; font-size: 42px; font-weight: 800; width: 100%; text-align: center; outline: none; letter-spacing: 4px; font-family: monospace; color: #1e293b; height: 100%; padding-top: 5px; }
         .field-group { margin-bottom: 20px; width: 100%; position: relative; }
-        label { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; display: block; padding-right: 5px; opacity: 0.9; }
+        label { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 8px; display: block; padding-right: 5px; opacity: 0.9; }
         .selector-trigger { width: 100%; height: 64px; background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 16px; color: #fff; font-size: 17px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .selector-trigger:active { transform: scale(0.98); background: rgba(30, 41, 59, 0.9); }
         .selector-trigger.disabled { opacity: 0.5; pointer-events: none; }
         .arrow { color: var(--accent); font-size: 12px; }
-        .popup-grid { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--card-border); border-radius: 16px; padding: 12px; z-index: 9999; margin-top: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-height: 380px; overflow-y: auto; border: 1px solid var(--accent); }
+        .popup-grid { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--card-border); border-radius: 16px; padding: 12px; z-index: 9999; margin-top: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); max-height: 380px; overflow-y: auto; border: 1px solid var(--accent); }
         .popup-grid.active { display: block; animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
         .search-input { width: 100%; padding: 14px; margin-bottom: 12px; background: #0f172a; border: 1px solid var(--card-border); border-radius: 10px; color: white; font-size: 16px; box-sizing: border-box; text-align: right; outline: none; }
         .search-input:focus { border-color: var(--accent); }
         .grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .grid-item { padding: 12px 4px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-muted); border: 1px solid transparent; min-height: 48px; display: flex; align-items: center; justify-content: center; line-height: 1.2; word-break: break-word; transition: 0.2s; }
+        .grid-item { padding: 12px 4px; text-align: center; background: rgba(255,255,255,0.05); border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-muted); border: 1px solid transparent; min-height: 48px; display: flex; align-items: center; justify-content: center; line-height: 1.2; word-break: break-word; transition: 0.2s; }
         .grid-item:hover { background: var(--accent); color: #000; font-weight: 700; }
         .grid-loader { grid-column: 1/-1; text-align: center; padding: 20px; color: var(--accent); display:flex; justify-content:center; align-items:center; gap:10px; }
         .manual-entry { grid-column: 1 / -1; background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px dashed var(--accent); }
-        
-        .btn-main { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 17px; font-weight: 700; cursor: pointer; color: white; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4); margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s; letter-spacing: 0.5px; }
+        .btn-main { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 17px; font-weight: 700; cursor: pointer; color: white; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4); margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s; letter-spacing: 0.5px; }
         .btn-outline { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); margin-top: 15px; color: var(--text-muted); width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
         
-        /* צ'ק ליסט */
         #screen-check { display: none; width: 100%; flex-direction: column; align-items: center; }
-        .category-header { width: 100%; margin: 30px 0 15px 0; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: right; }
-        .category-title { color: var(--accent); font-size: 18px; font-weight: 700; text-transform: uppercase; }
-        .check-item { width: 100%; background: var(--card-bg); backdrop-filter: blur(8px); border-radius: 16px; margin-bottom: 12px; border: 1px solid var(--card-border); display: flex; flex-direction: column; box-sizing: border-box; }
-        .check-item-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 16px; box-sizing: border-box; }
-        .right-side { display: flex; align-items: center; gap: 14px; flex-grow: 1; justify-content: flex-start; }
-        .info-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; flex-shrink: 0; font-family: 'Times New Roman', serif; font-style: italic; border: 1px solid rgba(56, 189, 248, 0.3); }
-        .item-name { font-weight: 500; font-size: 16px; color: var(--text-main); text-align: right; line-height: 1.3; }
-        .cb-custom { width: 28px; height: 28px; border: 2px solid #475569; border-radius: 8px; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-        .cb-custom.bad { background: var(--danger); border-color: var(--danger); transform: scale(1.1); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); } .cb-custom.bad:after { content: '✕'; color: white; font-weight: 900; font-size: 18px; }
-        .how-to-box { display: none; background: rgba(15, 23, 42, 0.6); border-top: 1px solid var(--card-border); padding: 16px; font-size: 14px; color: var(--text-muted); line-height: 1.6; text-align: right; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
-        .ok-text { color: var(--success); display: block; margin-top: 8px; font-weight: 600; background: rgba(16, 185, 129, 0.1); padding: 6px; border-radius: 6px; border-right: 3px solid var(--success); }
-        .not-ok-text { color: var(--danger); display: block; margin-top: 5px; font-weight: 600; background: rgba(239, 68, 68, 0.1); padding: 6px; border-radius: 6px; border-right: 3px solid var(--danger); }
-
+        .category-header { width: 100%; margin: 35px 0 15px 0; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: right; }
+        .category-title { color: var(--accent); font-size: 19px; font-weight: 800; text-transform: uppercase; }
+        .check-item { width: 100%; background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 16px; margin-bottom: 14px; border: 1px solid var(--card-border); display: flex; flex-direction: column; box-sizing: border-box; transition: transform 0.1s; }
+        .check-item-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 18px; box-sizing: border-box; }
+        .right-side { display: flex; align-items: center; gap: 15px; flex-grow: 1; justify-content: flex-start; }
+        .info-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; flex-shrink: 0; font-family: 'Times New Roman', serif; font-style: italic; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .item-name { font-weight: 600; font-size: 16px; color: var(--text-main); text-align: right; line-height: 1.3; }
+        .cb-custom { width: 30px; height: 30px; border: 2px solid #475569; border-radius: 8px; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+        .cb-custom.bad { background: var(--danger); border-color: var(--danger); transform: scale(1.1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); } 
+        .cb-custom.bad:after { content: '✕'; color: white; font-weight: 900; font-size: 20px; }
+        .how-to-box { display: none; background: rgba(15, 23, 42, 0.8); border-top: 1px solid var(--card-border); padding: 18px; font-size: 14px; color: var(--text-muted); line-height: 1.6; text-align: right; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
+        .ok-text { color: var(--success); display: block; margin-top: 10px; font-weight: 600; background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 8px; border-right: 3px solid var(--success); }
+        .not-ok-text { color: var(--danger); display: block; margin-top: 6px; font-weight: 600; background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 8px; border-right: 3px solid var(--danger); }
         #screen-result { display: none; flex-direction: column; align-items: center; text-align: center; width: 100%; }
         .final-gauge { width: 180px; height: 180px; border-radius: 50%; border: 12px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 68px; font-weight: 900; margin: 30px auto; color: #fff; background: var(--card-bg); transition: all 0.8s ease; }
         .defects-list { width: 100%; text-align: right; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 25px; display: none; box-sizing: border-box; }
         .defects-title { color: var(--danger); font-weight: 800; font-size: 16px; margin-bottom: 10px; display: block; } .defects-ul { margin: 0; padding-right: 20px; color: #fca5a5; font-size: 15px; line-height: 1.6; }
-
         #loader { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(5px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
         .orbit { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite linear; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -65,10 +61,10 @@
 </head>
 <body>
 
-<div id="loader"><div class="orbit"></div><div style="margin-top:20px; color:var(--accent); font-weight:600;">🤖 מנתח ב-AI...</div></div>
+<div id="loader"><div class="orbit"></div><div style="margin-top:20px; color:var(--accent); font-weight:600;">🤖 מנתח נתונים ב-AI...</div></div>
 
 <div id="screen-input" class="container">
-    <header><h1>🚗 CarCheck <span>HYBRID</span></h1></header>
+    <header><h1>🚗 CarCheck <span>PRO</span></h1></header>
     <div class="plate-box"><div class="plate-inner"><input id="plate" class="plate-input" type="tel" placeholder="00000000" maxlength="8"></div></div>
     
     <div class="field-group">
@@ -120,7 +116,7 @@
 <div id="screen-check" class="container">
     <header><h1>📋 בדיקת <span>שטח</span></h1></header>
     <div id="checklist-content" style="width: 100%;"></div>
-    <div style="position:fixed; bottom:0; left:0; right:0; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(10px); padding:20px; border-top:1px solid var(--card-border); z-index:100;">
+    <div style="position:fixed; bottom:0; left:0; right:0; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(10px); padding:20px; border-top:1px solid var(--card-border); z-index:100; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);">
         <button class="btn-main" style="background: var(--success); color: #fff; margin:0;" onclick="window.finishCheck()">📊 סיים בדיקה</button>
     </div>
 </div>
@@ -135,11 +131,11 @@
 </div>
 
 <script>
-// === מאגר מקומי (למהירות שיא) ===
+// === מאגר מקומי (Hardcoded) ליצרנים ודגמים ===
 const carData = {
     "טויוטה": ["קורולה", "יאריס", "RAV4", "C-HR", "לנד קרוזר", "פריוס", "היילקס", "קאמרי", "אייגו X"],
     "יונדאי": ["i10", "i20", "i30", "איוניק 5", "איוניק 6", "טוסון", "סנטה פה", "קונה", "אלנטרה", "באיון", "סונטה"],
-    "קיה": ["פיקנטו", "ספורטאז'", "נירו", "סטוניק", "סורנטו", "קרניבל", "EV6", "ריו", "סיד", "אופטימה"],
+    "קיה": ["פיקנטו", "ספורטאז'", "נירו", "סטוניק", "סורנטו", "קרניבל", "EV6", "ריו", "סיד", "אופטימה", "סלטוס"],
     "מאזדה": ["2", "3", "6", "CX-3", "CX-5", "CX-30", "CX-60", "CX-9", "MX-5"],
     "סקודה": ["אוקטביה", "סופרב", "קודיאק", "קארוק", "קאמיק", "פאביה", "אנייאק", "סקאלה"],
     "פולקסווגן": ["גולף", "פולו", "טיגואן", "פאסאט", "ID.4", "T-Roc", "טוראן", "ג'טה", "T-Cross"],
@@ -152,7 +148,7 @@ const carData = {
     "שברולט": ["ספארק", "טראוורס", "אקווינוקס", "בלייזר", "סילברדו", "מאליבו", "קרוז", "טראקס"],
     "BYD": ["Atto 3", "Dolphin", "Seal", "Tang", "Han"],
     "ג'ילי": ["Geometry C"],
-    "MG": ["MG4", "ZS EV", "EHS", "Marvel R", "MG3"],
+    "MG": ["MG4", "ZS EV", "EHS", "Marvel R", "MG3", "MG5"],
     "טסלה": ["Model 3", "Model Y", "Model S", "Model X"],
     "צ'רי": ["FX", "Tiggo 7 Pro", "Tiggo 8 Pro"],
     "אאודי": ["A1", "A3", "A4", "A5", "A6", "Q2", "Q3", "Q5", "Q7", "e-tron"],
@@ -163,53 +159,68 @@ const carData = {
     "סיטרואן": ["C3", "C4", "C5 Aircross", "ברלינגו"]
 };
 
-// === 35 בדיקות ===
+// === 35 בדיקות שטח מלאות (כולל NotOK) ===
 const checklistData = [
-    { category: "🔩 מנוע (קריטי)", items: [
-        { name: "🛢️ פקק מילוי שמן", weight: 25, howTo: "📍 מיקום: ראש המנוע.<br>👀 פעולה: פתח וחפש 'טחינה' (קצף לבן).", ok: "✅ תקין: פקק נקי, שחור או חום.", notOk: "❌ לא תקין: קצף לבן (מיונז)." },
-        { name: "🫧 בועות בעיבוי", weight: 25, howTo: "📍 מיקום: מיכל פלסטיק שקוף.<br>👀 פעולה: מנוע עובד - יש בועות במים?", ok: "✅ תקין: מים שקטים.", notOk: "❌ לא תקין: בועות עולות (ג'קוזי)." },
-        { name: "🌬️ נשימת מנוע", weight: 25, howTo: "👀 פעולה: הנח פקק הפוך על הפתח. הוא עף?", ok: "✅ תקין: רועד במקום.", notOk: "❌ לא תקין: הפקק עף." },
-        { name: "⛽ ריח דלק", weight: 25, howTo: "👀 פעולה: ריח בנזין חריף ברכב או במנוע?", ok: "✅ תקין: אין ריח.", notOk: "❌ לא תקין: ריח חריף." },
-        { name: "⚫ בוץ שמן", weight: 20, howTo: "👀 פעולה: האר לפנים המנוע. גושים שחורים?", ok: "✅ תקין: נקי וזהוב.", notOk: "❌ לא תקין: בוץ שחור סמיך." },
-        { name: "📏 מדיד שמן", weight: 15, howTo: "📍 מיקום: ידית צהובה.<br>👀 פעולה: בדוק גובה וצבע.", ok: "✅ תקין: דבש/חום, מלא.", notOk: "❌ לא תקין: שחור מדי או חסר." },
-        { name: "💧 נזילות שמן", weight: 15, howTo: "👀 פעולה: הבט על המנוע ולמטה.", ok: "✅ תקין: יבש.", notOk: "❌ לא תקין: רטוב ומבריק." },
-        { name: "🧪 נוזל קירור", weight: 10, howTo: "👀 פעולה: הבט במיכל.", ok: "✅ תקין: צבע מקורי (ירוק/ורוד).", notOk: "❌ לא תקין: מי ברז או חלודה." },
-        { name: "🔊 רעש מנוע", weight: 15, howTo: "👀 פעולה: הקשב בסרק.", ok: "✅ תקין: שקט ועגול.", notOk: "❌ לא תקין: תקתוקים מתכתיים." },
-        { name: "✊ לחץ צינור", weight: 15, howTo: "👀 פעולה: לחץ על צינור עליון (חם).", ok: "✅ תקין: גמיש.", notOk: "❌ לא תקין: קשה כאבן." },
-        { name: "🌀 מאוורר", weight: 15, howTo: "👀 פעולה: הפעל מזגן.", ok: "✅ תקין: עובד חזק.", notOk: "❌ לא תקין: לא מסתובב." }
-    ]},
-    { category: "⚙️ גיר והנעה", items: [
-        { name: "🥊 מכה בגיר", weight: 15, howTo: "👀 פעולה: P-D-R.", ok: "✅ תקין: חלק.", notOk: "❌ לא תקין: דפיקה חזקה." },
-        { name: "⛸️ החלקה", weight: 20, howTo: "👀 פעולה: גז חזק.", ok: "✅ תקין: תאוצה מיד.", notOk: "❌ לא תקין: מנוע צועק, רכב לא זז." },
-        { name: "🫨 רעידות", weight: 15, howTo: "👀 פעולה: סע 100 קמ\"ש.", ok: "✅ תקין: חלק.", notOk: "❌ לא תקין: רעידות בהגה/בודי." },
-        { name: "🔩 ציריות", weight: 15, howTo: "👀 פעולה: סיבוב מלא בנסיעה.", ok: "✅ תקין: שקט.", notOk: "❌ לא תקין: תקתוקים." },
-        { name: "🩸 שמן גיר", weight: 10, howTo: "👀 פעולה: בדוק צבע.", ok: "✅ תקין: אדום/בהיר.", notOk: "❌ לא תקין: שחור/שרוף." }
-    ]},
-    { category: "🛠️ שלדה ומרכב", items: [
-        { name: "🧲 מגנט", weight: 15, howTo: "👀 פעולה: מגנט על הפח.", ok: "✅ תקין: נצמד.", notOk: "❌ לא תקין: נופל (שפכטל)." },
-        { name: "🔥 ריתוכים", weight: 20, howTo: "📍 מיקום: מתחת לגומיות.", ok: "✅ תקין: נקודות עגולות.", notOk: "❌ לא תקין: חלק/מושחז." },
-        { name: "🔧 ברגי כנף", weight: 12, howTo: "👀 פעולה: צבע על הברגים?", ok: "✅ תקין: שלם.", notOk: "❌ לא תקין: מקולף (נפתח)." },
-        { name: "🌊 מים בבגאז'", weight: 15, howTo: "👀 פעולה: הרם שטיח.", ok: "✅ תקין: יבש.", notOk: "❌ לא תקין: רטוב/חלודה." },
-        { name: "🎨 הבדלי גוון", weight: 10, howTo: "👀 פעולה: הבט בשמש.", ok: "✅ תקין: אחיד.", notOk: "❌ לא תקין: הבדלים בדלתות." },
-        { name: "📐 מרווחים", weight: 10, howTo: "👀 פעולה: מכסה מנוע.", ok: "✅ תקין: שווה בשני הצדדים.", notOk: "❌ לא תקין: עקום." },
-        { name: "🦀 חלודה", weight: 15, howTo: "👀 פעולה: הבט למטה.", ok: "✅ תקין: נקי.", notOk: "❌ לא תקין: ריקבון." }
-    ]},
-    { category: "⚡ חשמל", items: [
-        { name: "💡 נורות", weight: 20, howTo: "👀 פעולה: האם נורה דולקת?", ok: "✅ תקין: נקי.", notOk: "❌ לא תקין: מנוע/כרית אוויר דולק." },
-        { name: "❄️ מזגן", weight: 10, howTo: "👀 פעולה: מקפיא?", ok: "✅ תקין: קור חזק.", notOk: "❌ לא תקין: חלש." },
-        { name: "🔥 חימום", weight: 10, howTo: "👀 פעולה: מחמם?", ok: "✅ תקין: חום חזק.", notOk: "❌ לא תקין: קר." },
-        { name: "🪟 חלונות", weight: 5, howTo: "👀 פעולה: בדוק 4.", ok: "✅ תקין: עולים.", notOk: "❌ לא תקין: תקוע." },
-        { name: "🔒 נעילה", weight: 5, howTo: "👀 פעולה: שלט.", ok: "✅ תקין: נועל הכל.", notOk: "❌ לא תקין: דלת פתוחה." },
-        { name: "💺 ריפודים", weight: 5, howTo: "👀 פעולה: בדוק קרעים.", ok: "✅ תקין: שלם.", notOk: "❌ לא תקין: קרוע/מלוכלך." },
-        { name: "🛁 הצפה", weight: 20, howTo: "👀 פעולה: מתחת לשטיח.", ok: "✅ תקין: נקי.", notOk: "❌ לא תקין: בוץ/חול." }
-    ]},
-    { category: "🛞 בטיחות", items: [
-        { name: "📅 תאריך צמיג", weight: 5, howTo: "👀 פעולה: חפש 4 ספרות.", ok: "✅ תקין: עד 4 שנים.", notOk: "❌ לא תקין: ישן." },
-        { name: "🌵 יובש", weight: 5, howTo: "👀 פעולה: סדקים?", ok: "✅ תקין: טרי.", notOk: "❌ לא תקין: יבש." },
-        { name: "🍩 רזרבי", weight: 5, howTo: "👀 פעולה: יש גלגל?", ok: "✅ תקין: יש.", notOk: "❌ לא תקין: אין." },
-        { name: "🎗️ חגורות", weight: 5, howTo: "👀 פעולה: משוך חזק.", ok: "✅ תקין: ננעל.", notOk: "❌ לא תקין: לא ננעל." },
-        { name: "🌧️ וישרים", weight: 5, howTo: "👀 פעולה: שפריצרים.", ok: "✅ תקין: מנקה.", notOk: "❌ לא תקין: יבש/מורח." }
-    ]}
+    {
+        category: "🔩 מנוע ומערכת קירור (קריטי)",
+        items: [
+            { name: "🛢️ פקק מילוי שמן ('טחינה')", weight: 25, howTo: "📍 מיקום: ראש המנוע.<br>👀 פעולה: פתח וחפש קצף לבן.", ok: "✅ תקין: פקק נקי, שחור או חום.", notOk: "❌ לא תקין: קצף לבן (כמו מיונז)." },
+            { name: "🫧 בועות במיכל עיבוי", weight: 25, howTo: "📍 מיקום: מיכל פלסטיק שקוף.<br>👀 פעולה: מנוע עובד - יש בועות במים?", ok: "✅ תקין: מים שקטים.", notOk: "❌ לא תקין: בועות אוויר עולות (כמו ג'קוזי)." },
+            { name: "🌬️ נשימת מנוע (Blow-By)", weight: 25, howTo: "👀 פעולה: הנח פקק הפוך על הפתח. הוא עף?", ok: "✅ תקין: הפקק רועד קלות במקום.", notOk: "❌ לא תקין: הפקק עף מהלחץ." },
+            { name: "⛽ ריח דלק חריף", weight: 25, howTo: "👀 פעולה: הרח סביב המנוע ובתוך הרכב.", ok: "✅ תקין: אין ריח דלק.", notOk: "❌ לא תקין: ריח חריף של בנזין." },
+            { name: "⚫ בוץ שמן (Sludge)", weight: 20, howTo: "👀 פעולה: האר לפנים המנוע. גושים שחורים?", ok: "✅ תקין: נקי וזהוב.", notOk: "❌ לא תקין: משקעים שחורים וסמיכים." },
+            { name: "📏 מדיד שמן (מפלס וצבע)", weight: 15, howTo: "📍 מיקום: ידית צהובה/כתומה.<br>👀 פעולה: בדוק גובה וצבע.", ok: "✅ תקין: צבע דבש/חום, מפלס תקין.", notOk: "❌ לא תקין: שמן שחור מדי או חסר." },
+            { name: "💧 נזילות שמן טריות", weight: 15, howTo: "👀 פעולה: הסתכל מתחת לרכב ועל הבלוק.", ok: "✅ תקין: מנוע יבש ואבקתי.", notOk: "❌ לא תקין: רטיבות שמן טרייה ומבריקה." },
+            { name: "🧪 צבע נוזל קירור", weight: 10, howTo: "👀 פעולה: הבט במיכל העיבוי.", ok: "✅ תקין: נוזל מקורי (ירוק/ורוד/כחול).", notOk: "❌ לא תקין: מי ברז שקופים או צבע חלודה." },
+            { name: "🔊 רעש מנוע (תקתוקים)", weight: 15, howTo: "👀 פעולה: הקשב למנוע בסרק.", ok: "✅ תקין: עבודה עגולה ושקטה.", notOk: "❌ לא תקין: תקתוקים מתכתיים חזקים." },
+            { name: "✊ לחץ בצנרת רדיאטור", weight: 15, howTo: "👀 פעולה: כשהמנוע חם, לחץ על הצינור העליון.", ok: "✅ תקין: גמיש מעט בלחיצה.", notOk: "❌ לא תקין: קשה כמו אבן." },
+            { name: "🌀 מאוורר רדיאטור", weight: 15, howTo: "👀 פעולה: הפעל מזגן. מאוורר עובד?", ok: "✅ תקין: עובד חזק מיד.", notOk: "❌ לא תקין: המאוורר לא מסתובב." }
+        ]
+    },
+    {
+        category: "⚙️ גיר והנעה",
+        items: [
+            { name: "🥊 מכה בשילוב הילוך", weight: 15, howTo: "👀 פעולה: העבר P-D-R. יש דפיקה?", ok: "✅ תקין: שילוב חלק.", notOk: "❌ לא תקין: דפיקה חזקה או קפיצה." },
+            { name: "⛸️ החלקה בהאצה", weight: 20, howTo: "👀 פעולה: גז חזק - טורים עולים בלי תאוצה?", ok: "✅ תקין: תאוצה מיידית.", notOk: "❌ לא תקין: המנוע צועק והרכב לא זז." },
+            { name: "🫨 רעידות בנסיעה", weight: 15, howTo: "👀 פעולה: סע ב-100 קמ\"ש.", ok: "✅ תקין: נסיעה חלקה.", notOk: "❌ לא תקין: ההגה או הרכב רועדים." },
+            { name: "🔩 רעשי ציריות", weight: 15, howTo: "👀 פעולה: סיבוב הגה מלא בנסיעה. רעש?", ok: "✅ תקין: שקט מוחלט.", notOk: "❌ לא תקין: רעש תקתוקים (קליק-קליק)." },
+            { name: "🩸 מצב שמן גיר", weight: 10, howTo: "👀 פעולה: אם יש מדיד - בדוק צבע.", ok: "✅ תקין: אדום/בהיר ונקי.", notOk: "❌ לא תקין: שמן שחור ושרוף." }
+        ]
+    },
+    {
+        category: "🛠️ שלדה ומרכב",
+        items: [
+            { name: "🧲 מבחן המגנט", weight: 15, howTo: "👀 פעולה: מגנט נופל מהפח? (שפכטל).", ok: "✅ תקין: נצמד חזק.", notOk: "❌ לא תקין: המגנט לא נצמד." },
+            { name: "🔥 נקודות ריתוך", weight: 20, howTo: "📍 מיקום: תחת הגומיות.<br>👀 פעולה: נקודות עגולות?", ok: "✅ תקין: נקודות מקוריות.", notOk: "❌ לא תקין: שטח חלק או מושחז." },
+            { name: "🔧 ברגי כנפיים", weight: 12, howTo: "👀 פעולה: צבע מקולף על הברגים?", ok: "✅ תקין: צבע מקורי.", notOk: "❌ לא תקין: סימני פתיחה ושריטות." },
+            { name: "🌊 רטיבות בתא מטען", weight: 15, howTo: "👀 פעולה: הרם שטיח. יש מים?", ok: "✅ תקין: יבש לגמרי.", notOk: "❌ לא תקין: רטיבות או חלודה." },
+            { name: "🎨 הבדלי גוון", weight: 10, howTo: "👀 פעולה: הסתכל בשמש על הדלתות.", ok: "✅ תקין: צבע אחיד.", notOk: "❌ לא תקין: הבדלים בין חלקים." },
+            { name: "📐 סימטריה במרווחים", weight: 10, howTo: "👀 פעולה: בדוק רווחים במכסה מנוע.", ok: "✅ תקין: רווחים שווים.", notOk: "❌ לא תקין: צד אחד רחב מהשני." },
+            { name: "🦀 חלודה בתחתית", weight: 15, howTo: "👀 פעולה: התכופף והסתכל למטה.", ok: "✅ תקין: נקי מריקבון.", notOk: "❌ לא תקין: חלודה מתפוררת." }
+        ]
+    },
+    {
+        category: "⚡ חשמל ופנים",
+        items: [
+            { name: "💡 נורות אזהרה", weight: 20, howTo: "👀 פעולה: האם נורה דולקת קבוע?", ok: "✅ תקין: לוח נקי.", notOk: "❌ לא תקין: נורת מנוע/כרית אוויר דולקת." },
+            { name: "❄️ מזגן (קור)", weight: 10, howTo: "👀 פעולה: מקפיא מיד?", ok: "✅ תקין: קור חזק.", notOk: "❌ לא תקין: לא מקרר מספיק." },
+            { name: "🔥 חימום", weight: 10, howTo: "👀 פעולה: מוציא חום?", ok: "✅ תקין: מחמם חזק.", notOk: "❌ לא תקין: יוצא אוויר קר." },
+            { name: "🪟 חלונות חשמל", weight: 5, howTo: "👀 פעולה: בדוק את כל ה-4.", ok: "✅ תקין: עולים חלק.", notOk: "❌ לא תקין: חלון תקוע או איטי." },
+            { name: "🔒 נעילה מרכזית", weight: 5, howTo: "👀 פעולה: נעל ופתח.", ok: "✅ תקין: הכל ננעל.", notOk: "❌ לא תקין: דלת אחת לא ננעלת." },
+            { name: "💺 מצב ריפודים", weight: 5, howTo: "👀 פעולה: קרעים או שקיעה?", ok: "✅ תקין: שלם ונקי.", notOk: "❌ לא תקין: קרעים או כתמים." },
+            { name: "🛁 נזקי הצפה", weight: 20, howTo: "👀 פעולה: הרם שטיח, חפש בוץ.", ok: "✅ תקין: נקי ויבש.", notOk: "❌ לא תקין: חול, בוץ או חלודה." }
+        ]
+    },
+    {
+        category: "🛞 צמיגים ובטיחות",
+        items: [
+            { name: "📅 תאריך צמיגים", weight: 5, howTo: "👀 פעולה: חפש 4 ספרות (למשל 1023).", ok: "✅ תקין: עד 4 שנים.", notOk: "❌ לא תקין: צמיג ישן מ-4 שנים." },
+            { name: "🌵 יובש בצמיגים", weight: 5, howTo: "👀 פעולה: חפש סדקים.", ok: "✅ תקין: גומי טרי.", notOk: "❌ לא תקין: סדקים ויובש." },
+            { name: "🍩 גלגל רזרבי", weight: 5, howTo: "👀 פעולה: בדוק בבגאז'.", ok: "✅ תקין: קיים ותקין.", notOk: "❌ לא תקין: חסר גלגל או ערכה." },
+            { name: "🎗️ חגורות בטיחות", weight: 5, howTo: "👀 פעולה: משוך חזק - ננעל?", ok: "✅ תקין: ננעל מיד.", notOk: "❌ לא תקין: לא ננעל או קרוע." },
+            { name: "🌧️ וישרים ומתיזים", weight: 5, howTo: "👀 פעולה: השפרץ מים.", ok: "✅ תקין: מנקים טוב.", notOk: "❌ לא תקין: מורחים או יבשים." }
+        ]
+    }
 ];
 
 let yBase = 2018; let currentScore = 100; let badItemsNames = [];
@@ -223,7 +234,7 @@ window.handlePicker = async function(type) {
     target.classList.add('active');
 
     const grid = document.getElementById(type + '-grid');
-    if (grid.children.length > 0 && type !== 'year') return; // אם טעון, אל תטען שוב
+    if (grid.children.length > 0 && type !== 'year') return;
 
     if (type === 'brand') {
         renderGrid('brand', Object.keys(carData));
@@ -231,7 +242,6 @@ window.handlePicker = async function(type) {
         const brand = document.getElementById('val-b').value;
         renderGrid('model', carData[brand] || []);
     } else if (type === 'submodel') {
-        // === כאן הקסם: רק תת-דגם הולך ל-AI ===
         const brand = document.getElementById('val-b').value;
         const model = document.getElementById('val-m').value;
         await fetchOptions('submodels', brand, model, grid);
@@ -242,7 +252,6 @@ window.handlePicker = async function(type) {
 
 async function fetchOptions(type, brand, model, gridElement) {
     gridElement.innerHTML = '<div class="grid-loader"><div class="orbit" style="width:20px;height:20px;border-width:2px;"></div> טוען מ-AI...</div>';
-    
     try {
         const res = await fetch('/get-car-options', {
             method: 'POST',
@@ -251,13 +260,14 @@ async function fetchOptions(type, brand, model, gridElement) {
         });
         const data = await res.json();
         
-        if (data.success && data.options.length > 0) {
+        if (data.success && Array.isArray(data.options)) {
             renderGrid('submodel', data.options, gridElement);
         } else {
-            gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:10px;">לא נמצא. הקלד ידנית.</div>';
+            gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:10px;">לא נמצאו תוצאות.</div>';
         }
     } catch (e) {
-        gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:red;">שגיאת תקשורת.</div>';
+        console.error(e);
+        gridElement.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;font-size:12px;">שגיאת תקשורת: ${e.message}</div>`;
     }
 }
 
@@ -265,24 +275,25 @@ function renderGrid(type, items, targetElement = null) {
     const g = targetElement || document.getElementById(type + '-grid');
     g.innerHTML = '';
     
-    const manualInput = document.querySelector(`#${type}-popup input`).value;
-    if (manualInput.length > 0) {
+    const manualInput = document.querySelector(`#${type}-popup input`);
+    if (manualInput && manualInput.value.length > 0) {
         const d = document.createElement('div'); d.className = 'grid-item manual-entry'; d.style.gridColumn = "1/-1";
-        d.innerHTML = `השתמש ב: "${manualInput}" ➕`;
-        d.onclick = () => selectItem(type, manualInput);
+        d.innerHTML = `השתמש ב: "${manualInput.value}" ➕`;
+        d.onclick = () => selectItem(type, manualInput.value);
         g.appendChild(d);
     }
 
-    if (items.length === 0 && !targetElement) { 
-         // אם ריק וזה לא ה-AI
-    } else {
-        items.sort();
-        items.forEach(item => {
-            const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = item;
-            d.onclick = () => selectItem(type, item);
-            g.appendChild(d);
-        });
+    if (!items || items.length === 0) {
+        if(!targetElement) g.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;">הקלד כדי להוסיף...</div>';
+        return;
     }
+
+    items.sort();
+    items.forEach(item => {
+        const d = document.createElement('div'); d.className = 'grid-item'; d.innerText = item;
+        d.onclick = () => selectItem(type, item);
+        g.appendChild(d);
+    });
 }
 
 function selectItem(type, value) {
@@ -296,7 +307,7 @@ function selectItem(type, value) {
     } else if (type === 'model') {
         resetField('submodel', '⚙️ תת-דגם...'); resetField('year', '📅 בחר שנה...');
         enableField('submodel');
-        // מנקה את הגריד של תת-דגם כדי שייטען מחדש מה-AI בפעם הבאה
+        // ניקוי כדי לגרום לטעינה מחודשת בפעם הבאה
         document.getElementById('submodel-grid').innerHTML = ''; 
     } else if (type === 'submodel') {
         enableField('year');
@@ -312,33 +323,20 @@ function resetField(type, ph) {
 function enableField(type) { document.getElementById(type + '-trigger').classList.remove('disabled'); }
 
 window.filterGrid = function(type, query) {
-    if (type === 'submodel') {
-        // ב-AI מסננים רק את מה שכבר ירד
-        const grid = document.getElementById(type + '-grid');
+    const grid = document.getElementById(type + '-grid');
+    // אם זה רשימה מקומית
+    if(type !== 'submodel') {
+        let source = [];
+        if (type === 'brand') source = Object.keys(carData);
+        else if (type === 'model') source = carData[document.getElementById('val-b').value] || [];
+        renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())), null);
+    } else {
+        // ב-AI מסננים רק מה שכבר מוצג
         const items = Array.from(grid.querySelectorAll('.grid-item:not([style*="grid-column"])'));
         items.forEach(item => {
             item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none';
         });
-    } else {
-        // ביצרן ודגם מסננים מהמאגר המקומי
-        let source = [];
-        if (type === 'brand') source = Object.keys(carData);
-        else if (type === 'model') {
-            const brand = document.getElementById('val-b').value;
-            source = carData[brand] || [];
-        }
-        renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())), null);
     }
-    
-    // הצגת כפתור ידני
-    const grid = document.getElementById(type + '-grid');
-    let manualBtn = grid.querySelector('.manual-entry');
-    if (!manualBtn && query.length > 0) {
-        manualBtn = document.createElement('div'); manualBtn.className = 'grid-item manual-entry'; manualBtn.style.gridColumn = '1/-1';
-        manualBtn.onclick = () => selectItem(type, query);
-        grid.prepend(manualBtn);
-    }
-    if(manualBtn) manualBtn.innerHTML = `השתמש ב: "${query}" ➕`;
 };
 
 function renderYears() {
@@ -373,7 +371,7 @@ window.startDeepAI = async function() {
         if(data.success) {
             const ai = data.aiAnalysis;
             const p = document.getElementById('ai-panel'); p.style.display = 'block';
-            p.innerHTML = `<div style="background:rgba(30, 41, 59, 0.8); padding:20px; border-radius:16px; margin-top:20px; border:1px solid var(--accent);">
+            p.innerHTML = `<div style="background:rgba(30, 41, 59, 0.9); padding:20px; border-radius:16px; margin-top:20px; border:1px solid var(--accent);">
                 <div style="font-size:48px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score}</div>
                 <p style="text-align:center; font-size:16px; margin-bottom:20px; font-weight:500;">${ai.summary}</p>
                 <div style="text-align:right;">
@@ -386,15 +384,17 @@ window.startDeepAI = async function() {
             </div>`;
             p.scrollIntoView({ behavior: 'smooth' });
         }
-    } catch(e) { alert("שגיאה בחיבור ל-AI"); }
-    finally { document.getElementById('loader').style.display = 'none'; }
+    } catch(e) { 
+        alert("שגיאה בחיבור ל-AI: " + e.message); 
+    } finally { 
+        document.getElementById('loader').style.display = 'none'; 
+    }
 };
 
 window.goToChecklist = function() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'flex';
     const content = document.getElementById('checklist-content'); content.innerHTML = '';
-    currentScore = 100;
     
     checklistData.forEach((cat, cIdx) => {
         content.innerHTML += `<div class="category-header"><span class="category-title">${cat.category}</span></div>`;
@@ -403,10 +403,10 @@ window.goToChecklist = function() {
             content.innerHTML += `<div class="check-item">
                 <div class="check-item-header">
                     <div class="right-side">
-                        <div class="info-btn" onclick="window.toggleHow('${id}')">i</div>
+                        <div class="info-btn" onclick="document.getElementById('how-${id}').style.display = document.getElementById('how-${id}').style.display === 'block' ? 'none' : 'block'">i</div>
                         <span class="item-name">${item.name}</span>
                     </div>
-                    <div id="${id}" class="cb-custom" onclick="this.classList.toggle('bad'); window.updateScore(${item.weight}, this.classList.contains('bad'), '${item.name}')"></div>
+                    <div id="${id}" class="cb-custom" onclick="window.toggleCheck('${id}', ${item.weight}, '${item.name}')"></div>
                 </div>
                 <div id="how-${id}" class="how-to-box">${item.howTo} 
                     <span class="ok-text">${item.ok}</span>
@@ -426,9 +426,6 @@ window.toggleCheck = (id, weight, name) => {
     if (!isBad) badItemsNames.push(name); else badItemsNames = badItemsNames.filter(i => i !== name);
 };
 
-window.toggleHow = (id) => { const el = document.getElementById('how-'+id); el.style.display = el.style.display === 'block' ? 'none' : 'block'; };
-window.updateScore = (w, isBad, name) => { window.toggleCheck(null, w, name); };
-
 window.finishCheck = () => {
     document.getElementById('screen-check').style.display = 'none';
     document.getElementById('screen-result').style.display = 'flex';
@@ -444,9 +441,14 @@ window.finishCheck = () => {
     };
     requestAnimationFrame(animate);
 
-    let color = score > 85 ? "var(--success)" : (score > 60 ? "var(--warning)" : "var(--danger)");
+    let color = score > 85 ? "var(--success)" : (score > 60 ? "var(--accent)" : "var(--danger)");
     g.style.borderColor = color; g.style.boxShadow = `0 0 30px ${color}`;
-    document.getElementById('result-text').innerText = score > 85 ? "💯 מומלץ לקנייה!" : (score > 60 ? "⚠️ דרוש מוסך." : "❌ לא לגעת.");
+    
+    let txt = "רכב במצב מעולה!";
+    if(score < 85) txt = "יש כמה ריג'קטים...";
+    if(score < 60) txt = "לא לגעת ברכב!";
+    
+    document.getElementById('result-text').innerText = txt;
     document.getElementById('result-text').style.color = color;
 
     const list = document.getElementById('defects-ul'); list.innerHTML = '';
@@ -462,7 +464,9 @@ window.findGarage = () => {
     }, () => window.open(`https://waze.com/ul?q=מכון%20בדיקה&navigate=yes`, '_blank'));
 };
 
-document.addEventListener('click', (e) => { if(!e.target.closest('.field-group')) document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active')); });
+document.addEventListener('click', (e) => { 
+    if(!e.target.closest('.field-group')) document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active')); 
+});
 </script>
 </body>
 </html>
