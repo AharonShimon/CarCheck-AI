@@ -17,7 +17,7 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const requestCache = {};
 
 if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. Using Gemini 1.5 Flash (Stable Mode).");
+else console.log("✅ Server started. Using Gemini 2.0 Flash.");
 
 // === 2. פונקציית המתנה (Sleep) ===
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,21 +31,22 @@ async function fetchWithRetry(url, payload, retries = 3) {
             body: JSON.stringify(payload)
         });
 
+        // טיפול בחסימת עומס (429)
         if (response.status === 429) {
             if (retries > 0) {
-                console.log(`⏳ קיבלתי 429 (עומס). ממתין 10 שניות... (נשאר: ${retries})`);
-                await sleep(10000); // חיקוי המתנה נדיב
+                console.log(`⏳ קיבלתי 429 (עומס). ממתין 5 שניות... (נשאר: ${retries})`);
+                await sleep(5000); 
                 return fetchWithRetry(url, payload, retries - 1);
             } else {
-                // אם נגמרו הניסיונות, נחזיר null כדי שהקוד ידע להשתמש בגיבוי
                 console.error("❌ נגמרו ניסיונות ה-Retry.");
-                return null; 
+                return null; // מחזיר כלום כדי להפעיל את הגיבוי
             }
         }
 
         if (!response.ok) {
             const errText = await response.text();
-            throw new Error(`Google Error ${response.status}: ${errText}`);
+            console.error(`Google Error ${response.status}: ${errText}`);
+            return null;
         }
 
         return await response.json();
@@ -56,7 +57,7 @@ async function fetchWithRetry(url, payload, retries = 3) {
     }
 }
 
-// === פונקציית ניקוי ===
+// === פונקציות ניקוי ===
 function extractJSON(text) {
     try {
         if (!text) return null;
@@ -77,19 +78,17 @@ function extractArray(text) {
     } catch (e) { return []; }
 }
 
-// === נתיב 1: דגמים (1.5 Flash + Cache + Retry) ===
+// === נתיב 1: דגמים (Gemini 2.0 Flash) ===
 app.post('/get-car-options', async (req, res) => {
     const { brand, model, year } = req.body;
     
-    // בדיקה בזיכרון
     const cacheKey = `OPT_${brand}_${model}_${year}`;
     if (requestCache[cacheKey]) {
-        console.log(`⚡ מהזיכרון: ${brand} ${model}`);
         return res.json({ success: true, options: requestCache[cacheKey] });
     }
 
-    // שימוש ב-1.5 במקום 2.5
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    // שינוי ל-2.0-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
     const payload = {
         contents: [{ parts: [{ text: `List trim levels for "${brand} ${model}" in year ${year} in Israel. Return ONLY JSON array.` }] }],
         generationConfig: { temperature: 0.0 }
@@ -100,26 +99,25 @@ app.post('/get-car-options', async (req, res) => {
     if (data) {
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
         const options = extractArray(rawText);
-        if (options.length > 0) requestCache[cacheKey] = options; // שומר בזיכרון
+        if (options.length > 0) requestCache[cacheKey] = options;
         res.json({ success: true, options: options });
     } else {
-        // במקרה של כישלון סופי, מחזיר רשימה ריקה לא קורס
         res.json({ success: false, options: [] });
     }
 });
 
-// === נתיב 2: ניתוח (1.5 Flash + Backup Data) ===
+// === נתיב 2: ניתוח (Gemini 2.0 Flash) ===
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
     console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
     
-    // בדיקה בזיכרון
     const cacheKey = `ANL_${brand}_${model}_${year}`;
     if (requestCache[cacheKey]) {
         return res.json({ success: true, aiAnalysis: requestCache[cacheKey] });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    // שינוי ל-2.0-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
     const payload = {
         contents: [{ parts: [{ text: `Act as an Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}". Output strict JSON: { "reliability_score": int, "summary": string, "common_faults": [], "pros": [], "cons": [] }` }] }],
         generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
@@ -131,13 +129,13 @@ app.post('/analyze-ai', async (req, res) => {
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         const analysis = extractJSON(rawText);
         if (analysis && analysis.reliability_score) {
-            requestCache[cacheKey] = analysis; // שומר בזיכרון
+            requestCache[cacheKey] = analysis;
             return res.json({ success: true, aiAnalysis: analysis });
         }
     }
 
-    // === מנגנון חירום (אם ה-AI נכשל סופית) ===
-    console.warn("⚠️ AI Failed or Limit Reached. Sending Backup Data.");
+    // === מנגנון חירום (אם הכל נכשל) ===
+    console.warn("⚠️ AI Failed. Sending Backup Data.");
     const backupData = {
         reliability_score: 80,
         summary: "המערכת בעומס רגעי. זהו ניתוח כללי: הרכב נחשב אמין יחסית לשנתון, אך דורש בדיקה קפדנית של היסטוריית הטיפולים.",
