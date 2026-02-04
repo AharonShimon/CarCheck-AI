@@ -14,38 +14,37 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// בדיקת מפתח בעלייה
-if (!API_KEY) console.error("❌ CRITICAL: Missing API Key in .env");
-else console.log("✅ Server started. API Key loaded.");
-
-// === פונקציית קסם לניקוי תשובות AI ===
+// === פונקציית ניקוי חכמה ===
 function cleanAndParseJSON(text) {
     try {
-        // מנסה למצוא מערך [...] או אובייקט {...}
-        const startArray = text.indexOf('[');
-        const endArray = text.lastIndexOf(']');
-        const startObj = text.indexOf('{');
-        const endObj = text.lastIndexOf('}');
-
-        let clean = text;
-
-        // אם זה מערך
-        if (startArray !== -1 && endArray !== -1) {
-            clean = text.substring(startArray, endArray + 1);
-        } 
-        // אם זה אובייקט (לניתוח הסופי)
-        else if (startObj !== -1 && endObj !== -1) {
-            clean = text.substring(startObj, endObj + 1);
+        let clean = text.replace(/```json|```/g, '').trim();
+        const startObj = clean.indexOf('{');
+        const endObj = clean.lastIndexOf('}');
+        if (startObj !== -1 && endObj !== -1) {
+            clean = clean.substring(startObj, endObj + 1);
         }
-
         return JSON.parse(clean);
     } catch (e) {
-        console.error("⚠️ JSON Parse Error on text:", text);
-        return null;
+        console.error("⚠️ Failed to parse JSON");
+        return null; 
     }
 }
 
-// === נתיב 1: שליפת תתי-דגם (AI) ===
+function cleanAndParseArray(text) {
+    try {
+        let clean = text.replace(/```json|```/g, '').trim();
+        const startArr = clean.indexOf('[');
+        const endArr = clean.lastIndexOf(']');
+        if (startArr !== -1 && endArr !== -1) {
+            clean = clean.substring(startArr, endArr + 1);
+        }
+        return JSON.parse(clean);
+    } catch (e) {
+        return [];
+    }
+}
+
+// === נתיב 1: שליפת תתי-דגם ===
 app.post('/get-car-options', async (req, res) => {
     try {
         const { brand, model } = req.body;
@@ -53,35 +52,27 @@ app.post('/get-car-options', async (req, res) => {
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        // הנחיה חריפה ל-AI לתת רשימה מקיפה
-        const prompt = `Task: List ALL trim levels and engine variants for "${brand} ${model}" sold in Israel.
-        Format: Return ONLY a raw JSON array of strings. No Markdown, no intro text.
-        Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo", "1.5 Inspire"]`;
+        const prompt = `List all trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
 
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.0 }
+            generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
         });
 
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-        console.log("🔹 AI Raw Answer:", rawText);
-
-        const options = cleanAndParseJSON(rawText) || [];
+        const options = cleanAndParseArray(rawText);
         
-        console.log("✅ Sending to client:", options);
         res.json({ success: true, options: options });
 
     } catch (error) {
-        console.error("❌ Error fetching submodels:", error.message);
-        res.json({ success: false, options: [] }); // לא מפיל את הלקוח
+        console.error("❌ Error:", error.message);
+        res.json({ success: false, options: [] });
     }
 });
 
 // === נתיב 2: ניתוח מלא ===
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
-    console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
-    
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
@@ -97,10 +88,13 @@ app.post('/analyze-ai', async (req, res) => {
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         const analysis = cleanAndParseJSON(rawText);
 
+        if (!analysis || !analysis.reliability_score) {
+            return res.json({ success: false, error: "AI Parsing Failed" });
+        }
+
         res.json({ success: true, aiAnalysis: analysis });
 
     } catch (error) {
-        console.error("❌ Analysis Error:", error.message);
         res.status(500).json({ error: "AI Failed" });
     }
 });
