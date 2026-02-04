@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CarCheck AI Pro | Final Full</title>
+    <title>CarCheck AI Pro | Final Fixed</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet"> 
     <style>
@@ -61,7 +61,7 @@
 </head>
 <body>
 
-<div id="loader"><div class="orbit"></div><div style="margin-top:20px; color:var(--accent); font-weight:600;">🤖 מנתח נתונים ב-AI...</div></div>
+<div id="loader"><div class="orbit"></div><div style="margin-top:20px; color:var(--accent); font-weight:600;">🤖 מנתח ב-AI...</div></div>
 
 <div id="screen-input" class="container">
     <header><h1>🚗 CarCheck <span>PRO</span></h1></header>
@@ -116,7 +116,7 @@
 <div id="screen-check" class="container">
     <header><h1>📋 בדיקת <span>שטח</span></h1></header>
     <div id="checklist-content" style="width: 100%;"></div>
-    <div style="position:fixed; bottom:0; left:0; right:0; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(10px); padding:20px; border-top:1px solid var(--card-border); z-index:100; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);">
+    <div style="position:fixed; bottom:0; left:0; right:0; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(10px); padding:20px; border-top:1px solid var(--card-border); z-index:100;">
         <button class="btn-main" style="background: var(--success); color: #fff; margin:0;" onclick="window.finishCheck()">📊 סיים בדיקה</button>
     </div>
 </div>
@@ -301,39 +301,49 @@ function selectItem(type, value) {
     document.getElementById(type + '-trigger').innerHTML = `<span>${value}</span> <span class="arrow">▼</span>`;
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
 
+    // === לוגיקת האיפוס המתוקנת ===
     if (type === 'brand') {
-        resetField('model', '🏎️ בחר דגם...'); resetField('submodel', '⚙️ תת-דגם...'); resetField('year', '📅 בחר שנה...');
-        enableField('model');
-    } else if (type === 'model') {
-        resetField('submodel', '⚙️ תת-דגם...'); resetField('year', '📅 בחר שנה...');
-        enableField('submodel');
-        // ניקוי כדי לגרום לטעינה מחודשת בפעם הבאה
+        // איפוס דגם
+        resetField('model', '🏎️ בחר דגם...');
+        document.getElementById('model-trigger').classList.remove('disabled');
+        document.getElementById('model-grid').innerHTML = ''; 
+
+        // איפוס תת-דגם
+        resetField('submodel', '⚙️ בחר תת-דגם...');
+        document.getElementById('submodel-grid').innerHTML = '';
+
+        // איפוס שנה
+        resetField('year', '📅 בחר שנה...');
+    } 
+    else if (type === 'model') {
+        // איפוס תת-דגם
+        resetField('submodel', '⚙️ בחר תת-דגם...');
+        document.getElementById('submodel-trigger').classList.remove('disabled');
         document.getElementById('submodel-grid').innerHTML = ''; 
-    } else if (type === 'submodel') {
-        enableField('year');
+
+        // איפוס שנה
+        resetField('year', '📅 בחר שנה...');
+    } 
+    else if (type === 'submodel') {
+        document.getElementById('year-trigger').classList.remove('disabled');
     }
 }
 
+// פונקציית עזר לאיפוס שדה
 function resetField(type, ph) {
     document.getElementById('val-' + type.charAt(0)).value = '';
     const el = document.getElementById(type + '-trigger');
     el.innerHTML = `<span>${ph}</span> <span class="arrow">▼</span>`;
     el.classList.add('disabled');
 }
-function enableField(type) { document.getElementById(type + '-trigger').classList.remove('disabled'); }
 
 window.filterGrid = function(type, query) {
     const grid = document.getElementById(type + '-grid');
-    // אם זה רשימה מקומית
-    if(type !== 'submodel') {
-        let source = [];
-        if (type === 'brand') source = Object.keys(carData);
-        else if (type === 'model') source = carData[document.getElementById('val-b').value] || [];
-        renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())), null);
+    if (type !== 'submodel') {
+        let source = (type === 'brand') ? Object.keys(carData) : (carData[document.getElementById('val-b').value] || []);
+        renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())));
     } else {
-        // ב-AI מסננים רק מה שכבר מוצג
-        const items = Array.from(grid.querySelectorAll('.grid-item:not([style*="grid-column"])'));
-        items.forEach(item => {
+        Array.from(grid.querySelectorAll('.grid-item')).forEach(item => {
             item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none';
         });
     }
