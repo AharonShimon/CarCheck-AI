@@ -14,22 +14,11 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// === פונקציית ניקוי חכמה ===
-function cleanAndParseJSON(text) {
-    try {
-        let clean = text.replace(/```json|```/g, '').trim();
-        const startObj = clean.indexOf('{');
-        const endObj = clean.lastIndexOf('}');
-        if (startObj !== -1 && endObj !== -1) {
-            clean = clean.substring(startObj, endObj + 1);
-        }
-        return JSON.parse(clean);
-    } catch (e) {
-        console.error("⚠️ Failed to parse JSON");
-        return null; 
-    }
-}
+// === מערכת זיכרון (Cache) ===
+// כאן נשמור את כל הרשימות שה-AI כבר הביא, כדי לא לשאול שוב
+const optionsCache = {}; 
 
+// === פונקציות עזר ===
 function cleanAndParseArray(text) {
     try {
         let clean = text.replace(/```json|```/g, '').trim();
@@ -44,13 +33,37 @@ function cleanAndParseArray(text) {
     }
 }
 
-// === נתיב 1: שליפת תתי-דגם ===
-app.post('/get-car-options', async (req, res) => {
+function cleanAndParseJSON(text) {
     try {
-        const { brand, model } = req.body;
-        console.log(`📋 AI מחפש תתי-דגם עבור: ${brand} ${model}`);
+        let clean = text.replace(/```json|```/g, '').trim();
+        const startObj = clean.indexOf('{');
+        const endObj = clean.lastIndexOf('}');
+        if (startObj !== -1 && endObj !== -1) {
+            clean = clean.substring(startObj, endObj + 1);
+        }
+        return JSON.parse(clean);
+    } catch (e) {
+        return null;
+    }
+}
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+// === נתיב 1: שליפת תתי-דגם (עם זיכרון!) ===
+app.post('/get-car-options', async (req, res) => {
+    const { brand, model } = req.body;
+    const cacheKey = `${brand}-${model}`; // מפתח ייחודי, למשל: "סיטרואן-ברלינגו"
+
+    // 1. בדיקה האם זה כבר בזיכרון?
+    if (optionsCache[cacheKey]) {
+        console.log(`⚡ שליפה מהיר מהזיכרון עבור: ${brand} ${model}`);
+        return res.json({ success: true, options: optionsCache[cacheKey] });
+    }
+
+    // 2. אם לא בזיכרון - שולחים בקשה ל-AI
+    try {
+        console.log(`🤖 שולח בקשה ל-AI עבור: ${brand} ${model}`);
+
+        // שימוש ב-1.5 Flash לרשימות (יותר מכסות בחינם, יותר מהיר)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
         
         const prompt = `List all trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
 
@@ -61,11 +74,21 @@ app.post('/get-car-options', async (req, res) => {
 
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
         const options = cleanAndParseArray(rawText);
+
+        // 3. שמירה בזיכרון לפעם הבאה!
+        if (options.length > 0) {
+            optionsCache[cacheKey] = options;
+        }
         
         res.json({ success: true, options: options });
 
     } catch (error) {
-        console.error("❌ Error:", error.message);
+        // טיפול ספציפי בשגיאת 429
+        if (error.response && error.response.status === 429) {
+            console.error("⏳ נגמרה המכסה (429). אנא המתן.");
+            return res.status(429).json({ success: false, error: "Too many requests" });
+        }
+        console.error("❌ Error fetching options:", error.message);
         res.json({ success: false, options: [] });
     }
 });
@@ -73,7 +96,10 @@ app.post('/get-car-options', async (req, res) => {
 // === נתיב 2: ניתוח מלא ===
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
+    console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
+    
     try {
+        // לניתוח נשארים עם 2.5 כי הוא חכם יותר
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const smartPrompt = `
@@ -95,6 +121,11 @@ app.post('/analyze-ai', async (req, res) => {
         res.json({ success: true, aiAnalysis: analysis });
 
     } catch (error) {
+        if (error.response && error.response.status === 429) {
+            console.error("⏳ 429 Too Many Requests - Analysis");
+            return res.status(429).json({ error: "System busy, try in 1 min" });
+        }
+        console.error("❌ AI Error:", error.message);
         res.status(500).json({ error: "AI Failed" });
     }
 });
