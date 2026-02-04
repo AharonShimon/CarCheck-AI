@@ -6,28 +6,41 @@ const path = require('path');
 
 const app = express();
 
+// הגדרות אבטחה וגישה
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// נתיב ראשי (מגיש את ה-HTML)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
+// קריאת המפתח מהסביבה
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// === חלק 1: שליפת רשימות דגמים (היה חסר לך) ===
+// ==========================================
+// נתיב 1: שליפת תתי-דגם (לטעינת התפריטים)
+// ==========================================
 app.post('/get-car-options', async (req, res) => {
+    // בדיקת מפתח
+    if (!API_KEY) {
+        console.error("❌ שגיאה: חסר מפתח API");
+        return res.status(500).json({ error: "Missing API Key" });
+    }
+
     try {
         const { type, brand, model } = req.body;
         console.log(`📋 בקשת רשימה (${type}): ${brand} ${model || ''}`);
 
         let prompt = "";
+        // אם מבקשים מודלים (למרות שיש לנו מקומית, זה לגיבוי)
         if (type === 'models') {
             prompt = `List the 20 most popular car models for "${brand}" sold in Israel. Return ONLY a raw JSON array of strings. No Markdown. Example: ["Corolla", "Yaris"]`;
-        } else if (type === 'submodels') {
-            prompt = `List the popular trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. No Markdown. Example: ["1.6 Sun", "1.8 Hybrid"]`;
+        } 
+        // אם מבקשים תתי-דגם (זה העיקר)
+        else if (type === 'submodels') {
+            prompt = `List the popular trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. No Markdown. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
         }
 
-        // שימוש ב-Gemini 2.5 Flash גם לרשימות
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const response = await axios.post(url, {
@@ -39,17 +52,21 @@ app.post('/get-car-options', async (req, res) => {
         });
 
         let rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+        // ניקוי הקוד למקרה שה-AI בכל זאת הוסיף Markdown
         rawText = rawText.replace(/```json|```/g, '').trim();
         
         res.json({ success: true, options: JSON.parse(rawText) });
 
     } catch (error) {
         console.error("❌ שגיאה בשליפת רשימות:", error.message);
+        // מחזיר מערך ריק במקום שגיאה כדי שהממשק לא יתקע
         res.json({ success: false, options: [] });
     }
 });
 
-// === חלק 2: ניתוח המכונאי (קיים, מותאם ל-2.5) ===
+// ==========================================
+// נתיב 2: ניתוח הרכב המלא (לכפתור הניתוח)
+// ==========================================
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
     console.log(`🚀 בקשת ניתוח: ${brand} ${model} (${year})`);
