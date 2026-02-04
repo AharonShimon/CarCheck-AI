@@ -112,6 +112,14 @@ app.post('/analyze-ai', async (req, res) => {
         res.status(500).json({ error: "AI Analysis Failed" });
     }
 });
-
+// === בדיקת דופק מהירה ===
+app.get('/test', (req, res) => {
+    res.json({ 
+        status: "OK", 
+        message: "השרת חי ובועט!", 
+        hasKey: !!process.env.GEMINI_API_KEY // יחזיר TRUE אם המפתח קיים
+    });
+});
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
