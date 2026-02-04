@@ -14,86 +14,93 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-// === פונקציית עזר חכמה לניקוי תשובות מה-AI ===
-function extractArrayFromText(text) {
+// בדיקת מפתח בעלייה
+if (!API_KEY) console.error("❌ CRITICAL: Missing API Key in .env");
+else console.log("✅ Server started. API Key loaded.");
+
+// === פונקציית קסם לניקוי תשובות AI ===
+function cleanAndParseJSON(text) {
     try {
-        // מחפש את הסוגר הראשון [ והאחרון ]
-        const startIndex = text.indexOf('[');
-        const endIndex = text.lastIndexOf(']');
-        
-        if (startIndex === -1 || endIndex === -1) {
-            console.error("⚠️ לא נמצאו סוגריים [] בתשובת ה-AI");
-            return []; 
+        // מנסה למצוא מערך [...] או אובייקט {...}
+        const startArray = text.indexOf('[');
+        const endArray = text.lastIndexOf(']');
+        const startObj = text.indexOf('{');
+        const endObj = text.lastIndexOf('}');
+
+        let clean = text;
+
+        // אם זה מערך
+        if (startArray !== -1 && endArray !== -1) {
+            clean = text.substring(startArray, endArray + 1);
+        } 
+        // אם זה אובייקט (לניתוח הסופי)
+        else if (startObj !== -1 && endObj !== -1) {
+            clean = text.substring(startObj, endObj + 1);
         }
 
-        // גוזר רק את מה שבפנים
-        const cleanJson = text.substring(startIndex, endIndex + 1);
-        return JSON.parse(cleanJson);
+        return JSON.parse(clean);
     } catch (e) {
-        console.error("⚠️ שגיאת פענוח JSON:", e.message);
-        console.error("הטקסט הבעייתי היה:", text);
-        return [];
+        console.error("⚠️ JSON Parse Error on text:", text);
+        return null;
     }
 }
 
-// === נתיב 1: שליפת תתי-דגם ===
+// === נתיב 1: שליפת תתי-דגם (AI) ===
 app.post('/get-car-options', async (req, res) => {
     try {
         const { brand, model } = req.body;
-        console.log(`📋 מבקש תתי-דגם עבור: ${brand} ${model}`);
+        console.log(`📋 AI מחפש תתי-דגם עבור: ${brand} ${model}`);
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        const prompt = `List the popular trim levels and engine variants for "${brand} ${model}" sold in Israel. Return ONLY a raw JSON array of strings. Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo"]`;
+        // הנחיה חריפה ל-AI לתת רשימה מקיפה
+        const prompt = `Task: List ALL trim levels and engine variants for "${brand} ${model}" sold in Israel.
+        Format: Return ONLY a raw JSON array of strings. No Markdown, no intro text.
+        Example: ["1.6 Sun", "1.8 Hybrid", "1.2 Turbo", "1.5 Inspire"]`;
 
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
+            generationConfig: { temperature: 0.0 }
         });
 
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-        console.log("🔹 תשובת AI גולמית:", rawText); // נראה מה הגיע
+        console.log("🔹 AI Raw Answer:", rawText);
 
-        // שימוש בפונקציית הניקוי החדשה
-        const options = extractArrayFromText(rawText);
+        const options = cleanAndParseJSON(rawText) || [];
         
-        console.log("✅ רשימה נקייה שנשלחת ללקוח:", options);
+        console.log("✅ Sending to client:", options);
         res.json({ success: true, options: options });
 
     } catch (error) {
-        console.error("❌ שגיאת שרת:", error.message);
-        res.json({ success: false, options: [] });
+        console.error("❌ Error fetching submodels:", error.message);
+        res.json({ success: false, options: [] }); // לא מפיל את הלקוח
     }
 });
 
-// === נתיב 2: ניתוח ===
+// === נתיב 2: ניתוח מלא ===
 app.post('/analyze-ai', async (req, res) => {
     const { brand, model, year } = req.body;
-    console.log(`🚀 מנתח: ${brand} ${model} (${year})`);
+    console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
     
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        const prompt = `Act as an Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}". JSON format only.
-        Return: { "reliability_score": int, "summary": string, "common_faults": [], "pros": [], "cons": [] }`;
+        const smartPrompt = `
+        Act as a strict Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}".
+        Return JSON ONLY: { "reliability_score": int, "summary": string, "common_faults": [], "pros": [], "cons": [] }`;
 
         const response = await axios.post(url, {
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: smartPrompt }] }],
             generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
         });
         
         const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        
-        // כאן ה-AI מחזיר אובייקט {} ולא מערך [], אז ננקה בזהירות
-        let cleanText = rawText.replace(/```json|```/g, '').trim();
-        const start = cleanText.indexOf('{');
-        const end = cleanText.lastIndexOf('}');
-        if(start !== -1 && end !== -1) cleanText = cleanText.substring(start, end+1);
+        const analysis = cleanAndParseJSON(rawText);
 
-        res.json({ success: true, aiAnalysis: JSON.parse(cleanText) });
+        res.json({ success: true, aiAnalysis: analysis });
 
     } catch (error) {
-        console.error("❌ שגיאה בניתוח:", error.message);
+        console.error("❌ Analysis Error:", error.message);
         res.status(500).json({ error: "AI Failed" });
     }
 });
