@@ -15,24 +15,28 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 const API_KEY = process.env.GEMINI_API_KEY; 
 
 app.post('/analyze-ai', async (req, res) => {
-    console.log(`🚀 בקשת ניתוח (Gemini 2.5): ${req.body.brand} ${req.body.model} (${req.body.year})`);
+    // כאן ה'model' כולל כבר את התת-דגם והמנוע שהגיעו מהלקוח
+    const { brand, model, year } = req.body;
+
+    console.log(`🚀 בקשה חדשה: יצרן: [${brand}] | דגם מלא: [${model}] | שנה: [${year}]`);
     
     if (!API_KEY) return res.status(500).json({ error: "חסר מפתח API" });
 
     try {
-        const { brand, model, year } = req.body;
-        
-        // === שימוש בלעדי ב-GEMINI 2.5 FLASH ===
+        // שימוש במודל 2.5 כפי שביקשת - המודל הכי חזק לניתוח טקסט
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
         const smartPrompt = `
         Act as a strict, cynical Israeli vehicle inspector. 
-        Analyze: "${brand} ${model} year ${year}".
+        Analyze specifically: "${brand} ${model} year ${year}".
+
+        CRITICAL CONTEXT:
+        The model name provided ("${model}") includes the specific Engine size and Trim level (Sub-model). 
+        You MUST tailor the faults to this specific engine/transmission combination if applicable (e.g., distinguish between 1.2 Turbo and 1.6 engines).
 
         RULES:
-        1. Be specific about engine/transmission faults for this specific model/year in Israel.
-        2. Link faults to physical checks from the checklist (e.g., "Check oil cap", "Check coolant bubbles").
-        3. Provide practical inspection advice in Hebrew brackets for each fault.
+        1. Link faults to physical checks from the checklist (e.g., "Check oil cap", "Check coolant bubbles").
+        2. Provide practical inspection advice in Hebrew brackets for each fault.
         
         Return JSON (Hebrew):
         {
@@ -46,7 +50,7 @@ app.post('/analyze-ai', async (req, res) => {
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: smartPrompt }] }],
             generationConfig: { 
-                temperature: 0.0, // דיוק מקסימלי
+                temperature: 0.0, // דיוק מקסימלי ללא המצאות
                 responseMimeType: "application/json" 
             }
         });
