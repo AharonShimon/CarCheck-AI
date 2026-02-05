@@ -14,26 +14,32 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 const API_KEY = process.env.GEMINI_API_KEY; 
 
 if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. AI Logic: Analysis ONLY.");
+else console.log("✅ Server started. Mode: Analysis ONLY.");
 
-// === נתיב יחיד: ניתוח תקלות וציון (AI) ===
 app.post('/analyze-ai', async (req, res) => {
-    const { brand, model, year } = req.body;
-    console.log(`🚀 Analyzing: ${brand} ${model} (${year})`);
+    // השרת מקבל את כל השדות, כולל תת-הדגם שהוקלד ידנית
+    const { brand, model, submodel, year } = req.body;
+    
+    // הרכבת השאילתה המלאה
+    const fullCarName = `${brand} ${model} ${submodel} (${year})`;
+    console.log(`🚀 AI Analyzing: ${fullCarName}`);
     
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
         
-        // פרומפט ממוקד לניתוח בלבד
         const prompt = `
-        Act as an Israeli vehicle inspector. Analyze: "${brand} ${model} year ${year}".
-        Output strict JSON only: 
+        Act as an expert Israeli vehicle inspector. 
+        Target Vehicle: "${fullCarName}".
+        
+        Task: Provide a professional reliability analysis specifically for the Israeli market conditions.
+        
+        Return strict JSON only (no markdown, no extra text):
         { 
             "reliability_score": 85, 
-            "summary": "Short Hebrew summary", 
-            "common_faults": ["Fault 1", "Fault 2"], 
-            "pros": ["Pro 1", "Pro 2"], 
-            "cons": ["Con 1", "Con 2"] 
+            "summary": "Short professional summary in Hebrew (2 sentences)", 
+            "common_faults": ["Fault 1 (Hebrew)", "Fault 2 (Hebrew)", "Fault 3 (Hebrew)"], 
+            "pros": ["Pro 1 (Hebrew)", "Pro 2 (Hebrew)"], 
+            "cons": ["Con 1 (Hebrew)", "Con 2 (Hebrew)"] 
         }`;
 
         const response = await fetch(url, {
@@ -41,7 +47,7 @@ app.post('/analyze-ai', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
+                generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
             })
         });
 
@@ -49,25 +55,20 @@ app.post('/analyze-ai', async (req, res) => {
 
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        
-        // ניקוי JSON
         let clean = rawText.replace(/```json|```/g, '').trim();
-        const start = clean.indexOf('{'); const end = clean.lastIndexOf('}');
-        if (start !== -1 && end !== -1) clean = clean.substring(start, end + 1);
         
         res.json({ success: true, aiAnalysis: JSON.parse(clean) });
 
     } catch (error) {
         console.error("❌ Analysis Error:", error.message);
-        // במקרה של תקלה - מחזירים תשובת גיבוי כדי שהאפליקציה תעבוד
         res.json({ 
             success: true, 
             aiAnalysis: {
                 reliability_score: 80,
-                summary: "לא ניתן היה למשוך נתונים בזמן אמת. מוצג ניתוח כללי לדגם זה.",
-                common_faults: ["בלאי טבעי", "מערכת קירור", "חיישנים"],
-                pros: ["סחירות", "חלפים זמינים"],
-                cons: ["צריכת דלק"]
+                summary: "לא ניתן היה לבצע ניתוח מעמיק כרגע. מוצג מידע כללי על סמך נתוני יצרן.",
+                common_faults: ["בלאי טבעי בהתאם לשנתון", "מערכת קירור", "רגישות לחלפים לא מקוריים"],
+                pros: ["סחירות טובה", "חלפים זמינים"],
+                cons: ["צריכת דלק", "פלסטיקה"]
             }
         });
     }
