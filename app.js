@@ -24,8 +24,12 @@ function setupListeners() {
     });
 
     // חיפוש
-    ['brand', 'model'].forEach(type => {
-        document.getElementById(`${type}-search`).addEventListener('keyup', (e) => filterGrid(type, e.target.value));
+   // חיפוש - עדכנו את הרשימה לכלול גם מנוע וגימור
+    ['brand', 'model', 'engine', 'trim'].forEach(type => {
+        const el = document.getElementById(`${type}-search`);
+        if (el) {
+            el.addEventListener('keyup', (e) => filterGrid(type, e.target.value));
+        }
     });
 
     // כפתורים
