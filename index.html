@@ -3,66 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CarCheck AI | בדיקת רכב חכמה</title>
+    <title>CarCheck AI Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div id="loader" class="loader-overlay" style="display:none;">
         <div class="spinner"></div>
-        <p id="loader-text">טוען...</p>
+        <p id="loader-text" style="color:white; margin-top:20px; font-weight:bold;">טוען נתונים...</p>
     </div>
 
-    <main id="screen-input" class="container">
-        <h1>בדיקת רכב חכמה 🚗</h1>
-        
-        <input type="hidden" id="val-b"><input type="hidden" id="val-m">
-        <input type="hidden" id="val-y"><input type="hidden" id="val-e">
-        <input type="hidden" id="val-t">
+    <div class="container">
+        <header>
+            <h1>CarCheck <span style="color:var(--accent)">AI</span></h1>
+            <p>בדיקת רכב חכמה לפני קנייה</p>
+        </header>
 
-        <div class="field-group">
-            <label>יצרן</label>
-            <div id="brand-trigger" class="selector"><span>בחר...</span></div>
-            <div id="brand-popup" class="popup-grid">
-                <input type="text" id="brand-search" placeholder="חפש יצרן...">
-                <div id="brand-grid" class="grid-container"></div>
+        <main id="screen-input">
+            <input type="hidden" id="val-b"><input type="hidden" id="val-m">
+            <input type="hidden" id="val-y"><input type="hidden" id="val-e">
+            <input type="hidden" id="val-t">
+
+            <div class="field-box">
+                <label>יצרן</label>
+                <div id="brand-trigger" class="selector"><span>בחר יצרן...</span></div>
+                <div id="brand-popup" class="popup"><div id="brand-grid" class="grid"></div></div>
             </div>
-        </div>
 
-        <div class="field-group">
-            <label>דגם</label>
-            <div id="model-trigger" class="selector disabled"><span>בחר...</span></div>
-            <div id="model-popup" class="popup-grid">
-                <input type="text" id="model-search" placeholder="חפש דגם...">
-                <div id="model-grid" class="grid-container"></div>
+            <div class="field-box">
+                <label>דגם</label>
+                <div id="model-trigger" class="selector disabled"><span>בחר דגם...</span></div>
+                <div id="model-popup" class="popup"><div id="model-grid" class="grid"></div></div>
             </div>
-        </div>
 
-        <div class="field-group">
-            <label>שנה</label>
-            <div id="year-trigger" class="selector disabled"><span>בחר...</span></div>
-            <div id="year-popup" class="popup-grid"><div id="year-grid" class="grid-container"></div></div>
-        </div>
+            <div class="field-box">
+                <label>שנה</label>
+                <div id="year-trigger" class="selector disabled"><span>בחר שנה...</span></div>
+                <div id="year-popup" class="popup"><div id="year-grid" class="grid"></div></div>
+            </div>
 
-        <div class="field-group">
-            <label>מנוע (AI ✨)</label>
-            <div id="engine-trigger" class="selector disabled"><span>🔌 בחר מנוע...</span></div>
-            <div id="engine-popup" class="popup-grid"><div id="engine-grid" class="grid-container"></div></div>
-        </div>
+            <div class="field-box highlight">
+                <label>מנוע (AI ✨)</label>
+                <div id="engine-trigger" class="selector disabled"><span>ממתין לנתונים...</span></div>
+                <div id="engine-popup" class="popup"><div id="engine-grid" class="grid"></div></div>
+            </div>
 
-        <div class="field-group">
-            <label>רמת גימור (AI ✨)</label>
-            <div id="trim-trigger" class="selector disabled"><span>✨ בחר גימור...</span></div>
-            <div id="trim-popup" class="popup-grid"><div id="trim-grid" class="grid-container"></div></div>
-        </div>
+            <div class="field-box highlight">
+                <label>רמת גימור</label>
+                <div id="trim-trigger" class="selector disabled"><span>ממתין לנתונים...</span></div>
+                <div id="trim-popup" class="popup"><div id="trim-grid" class="grid"></div></div>
+            </div>
 
-        <button id="btn-ai" class="btn-main" disabled>נתח רכב עם AI 🤖</button>
-        <div id="ai-panel"></div>
-    </main>
-
-    <section id="screen-check" style="display:none;">
-        <div id="checklist-content"></div>
-        <button id="btn-finish" class="btn-main">סיים בדיקה 🏁</button>
-    </section>
+            <button id="btn-analyze" class="btn-primary" disabled>קבל חוות דעת מוסכניק 🤖</button>
+            
+            <div id="ai-result"></div>
+        </main>
+    </div>
 
     <script type="module" src="app.js"></script>
 </body>
