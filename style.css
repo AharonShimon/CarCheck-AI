@@ -1,136 +1,85 @@
-:root {
-    --bg-color: #121212;
-    --card-bg: #1e1e1e;
-    --primary: #2196F3;       /* כחול קלאסי בולט */
-    --primary-hover: #1976D2;
-    --accent: #FF5252;        /* אדום לאזהרות */
-    --text-main: #ffffff;
-    --text-sec: #b0b0b0;
-    --border: #333333;
+/* style.css - העיצוב המקורי שלך */
+:root { 
+    --bg-deep:#0f172a; 
+    --bg-gradient-start:#0f172a; 
+    --bg-gradient-end:#1e293b; 
+    --card-bg:rgba(30,41,59,0.85); 
+    --card-border:rgba(148,163,184,0.15); 
+    --accent:#38bdf8; 
+    --accent-glow:rgba(56,189,248,0.3); 
+    --text-main:#f8fafc; 
+    --text-muted:#94a3b8; 
+    --danger:#ef4444; 
+    --success:#10b981; 
+    --plate-yellow:#facc15; 
 }
 
-body {
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* פונט מערכת רגיל שתומך באימוג'י */
-    margin: 0;
-    padding: 15px;
-    direction: rtl;
-    line-height: 1.5;
+body { 
+    font-family: 'Heebo', sans-serif; 
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%); 
+    color: var(--text-main); 
+    margin: 0; 
+    direction: rtl; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    overflow-x: hidden; 
+    -webkit-tap-highlight-color: transparent; 
 }
 
-.app-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding-bottom: 80px; /* רווח למטה כדי שהכפתור לא ייחתך */
-}
+.container { padding: 24px; width: 100%; max-width: 480px; box-sizing: border-box; padding-bottom: 120px; }
+header { text-align: center; margin: 20px 0 30px 0; }
+header h1 { font-size: 28px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+header h1 span { background: linear-gradient(to right, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px var(--accent-glow); }
 
-/* כותרות */
-header { text-align: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-header h1 { margin: 0; font-size: 1.8rem; }
-header span { color: var(--primary); }
+/* לוחית רישוי */
+.plate-box { background: var(--plate-yellow); padding: 4px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin: 0 auto 30px auto; width: 100%; max-width: 320px; position: relative; }
+.plate-inner { border: 3px solid #1e293b; border-radius: 8px; display: flex; align-items: center; padding: 0 10px; height: 60px; background: var(--plate-yellow); }
+.plate-inner::before { content: "IL"; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; width: 25px; height: 100%; background: #003399; border-radius: 4px 0 0 4px; margin-left: 10px; }
+.plate-input { background: none; border: none; font-size: 42px; font-weight: 800; width: 100%; text-align: center; outline: none; letter-spacing: 4px; font-family: monospace; color: #1e293b; height: 100%; padding-top: 5px; }
 
-/* כרטיסים */
-.step-card {
-    background: var(--card-bg);
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin-bottom: 20px;
-    display: none; /* מוסתר כברירת מחדל */
-}
+/* שדות בחירה מותאמים אישית */
+.field-group { margin-bottom: 20px; width: 100%; position: relative; }
+label { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 8px; display: block; padding-right: 5px; opacity: 0.9; }
+.selector-trigger { width: 100%; height: 64px; background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 16px; color: #fff; font-size: 17px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; transition: all 0.2s ease; }
+.selector-trigger.disabled { opacity: 0.5; pointer-events: none; }
 
-.step-card.active {
-    display: block;
-    animation: fadeIn 0.3s ease-in;
-}
+.text-input { width: 100%; height: 64px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; color: #fff; font-size: 17px; padding: 0 20px; box-sizing: border-box; outline: none; text-align: right; font-family: 'Heebo', sans-serif; }
+.text-input:focus { border-color: var(--accent); }
 
-/* --- תיקון השדות (חזרה למראה המקורי) --- */
-.input-group { margin-bottom: 15px; }
-label { display: block; margin-bottom: 5px; color: var(--primary); font-weight: bold; }
+.popup-grid { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--accent); border-radius: 16px; padding: 12px; z-index: 9999; margin-top: 8px; max-height: 350px; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+.popup-grid.active { display: block; animation: slideUp 0.2s ease; }
+.search-input { width: 100%; padding: 12px; margin-bottom: 10px; background: #0f172a; border: 1px solid var(--card-border); border-radius: 10px; color: white; text-align: right; outline: none; box-sizing: border-box; } /* הוספתי box-sizing לתיקון */
 
-select, input {
-    width: 100%;
-    padding: 12px;
-    background-color: #2c2c2c;
-    border: 1px solid #555;
-    color: white;
-    font-size: 16px; /* גודל שלא עושה זום באייפון */
-    border-radius: 8px;
-    margin-bottom: 5px;
-    box-sizing: border-box;
-    
-    /* הפקודות שמחזירות את החץ והמראה הרגיל */
-    appearance: menulist; 
-    -webkit-appearance: menulist;
-}
+.grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid-item { padding: 12px 4px; text-align: center; background: rgba(255,255,255,0.05); border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; min-height: 45px; display: flex; align-items: center; justify-content: center; }
+.grid-item:hover { background: var(--accent); color: #000; }
 
-select:disabled {
-    opacity: 0.4;
-    background-color: #1a1a1a;
-    border-color: #333;
-}
+/* כפתורים */
+.btn-main { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 17px; font-weight: 700; cursor: pointer; color: white; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+.btn-main:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+.btn-outline { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); color: var(--text-muted); margin-top: 15px; }
 
-/* --- תיקון הכפתורים שנעלמו --- */
-.primary-btn {
-    display: block; /* מוודא שהכפתור תופס שורה */
-    width: 100%;
-    padding: 15px;
-    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* צל כדי שיראה כמו כפתור */
-    text-align: center;
-}
+/* צ'קליסט */
+#screen-check { display: none; width: 100%; }
+.category-header { margin: 30px 0 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+.category-title { color: var(--accent); font-size: 19px; font-weight: 800; }
+.check-item { background: var(--card-bg); border-radius: 16px; margin-bottom: 12px; border: 1px solid var(--card-border); }
+.check-item-header { display: flex; justify-content: space-between; align-items: center; padding: 18px; }
+.info-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); color: var(--accent); display: flex; align-items: center; justify-content: center; font-style: italic; font-weight: bold; cursor: pointer; border: 1px solid var(--accent); }
+.cb-custom { width: 32px; height: 32px; border: 2px solid #475569; border-radius: 8px; transition: 0.2s; cursor: pointer; }
+.cb-custom.bad { background: var(--danger); border-color: var(--danger); position: relative; }
+.cb-custom.bad:after { content: '✕'; color: white; font-weight: bold; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.how-to-box { display: none; padding: 15px; background: rgba(15, 23, 42, 0.6); font-size: 14px; line-height: 1.6; color: var(--text-muted); border-top: 1px solid var(--card-border); }
 
-.primary-btn:active {
-    transform: translateY(2px);
-    box-shadow: none;
-}
+/* תוצאות */
+#screen-result { display: none; text-align: center; }
+.final-gauge { width: 150px; height: 150px; border-radius: 50%; border: 10px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-size: 50px; font-weight: 900; margin: 30px auto; }
+.defects-list { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: 16px; padding: 20px; text-align: right; margin-bottom: 20px; }
 
-/* --- תיקון הצ'קליסט והאימוג'ים --- */
-.check-item {
-    display: flex;
-    align-items: center;
-    background: #252525;
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-.check-item label {
-    flex: 1;
-    margin: 0 10px 0 0;
-    color: white;
-    font-weight: normal;
-    cursor: pointer;
-}
-
-.car-check {
-    width: 24px;
-    height: 24px;
-    accent-color: var(--accent); /* צבע ה-V */
-}
-
-/* כפתור המידע (אימוג'י) */
-.info-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem; /* אימוג'י גדול */
-    cursor: pointer;
-    padding: 0 10px;
-    line-height: 1;
-}
-
-/* אנימציה */
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* אזור תוצאות */
-#ai-results { padding: 10px; }
-.loading { font-size: 1.2rem; color: var(--primary); text-align: center; }
+/* לואדר */
+#loader { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; }
+.spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
