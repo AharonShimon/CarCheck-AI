@@ -10,119 +10,76 @@ app.use(express.static(path.join(__dirname)));
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// === הפתרון היצירתי: רשימת כתובות ומודלים ===
-// אנחנו ננסה את כל הקומבינציות האפשריות עד שנצליח
-const CONFIGS = [
-    // ניסיון 1: הגרסה היציבה (v1) עם המודל המהיר
-    { version: 'v1', model: 'gemini-1.5-flash' },
-    // ניסיון 2: גרסת הבטא (v1beta) עם המודל המהיר
-    { version: 'v1beta', model: 'gemini-1.5-flash' },
-    // ניסיון 3: המודל הישן והאמין (gemini-pro) בגרסה יציבה
-    { version: 'v1', model: 'gemini-pro' },
-    // ניסיון 4: המודל הישן בגרסת בטא
-    { version: 'v1beta', model: 'gemini-pro' }
-];
+// === הפונקציה הישנה והטובה שעבדה ===
+async function askGoogle(prompt) {
+    // משתמשים בכתובת הישירה, בלי ספריות
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+        })
+    });
 
-async function callGoogleAI(prompt) {
-    let lastError = null;
+    const data = await response.json();
 
-    // לולאה שרצה על כל הכתובות האפשריות
-    for (const config of CONFIGS) {
-        try {
-            const url = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${API_KEY}`;
-            console.log(`🔌 מנסה להתחבר דרך: ${config.version} / ${config.model}...`);
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    // === הפיצ'ר החדש: כפיית פורמט JSON ===
-                    // זה מבטיח דיוק של 100% במבנה הנתונים
-                    generationConfig: {
-                        response_mime_type: "application/json"
-                    }
-                })
-            });
-
-            const data = await response.json();
-
-            // אם הכתובת הזו לא עובדת, נזרקת שגיאה ונעבור לכתובת הבאה
-            if (data.error) throw new Error(data.error.message);
-            if (!data.candidates || !data.candidates[0]) throw new Error("Empty response");
-
-            console.log(`✅ הצלחה! נתונים התקבלו מ-${config.model}`);
-            return data.candidates[0].content.parts[0].text;
-
-        } catch (e) {
-            console.warn(`⚠️ נכשל ב-${config.model}: ${e.message}`);
-            lastError = e;
-        }
+    // בדיקה פשוטה אם יש שגיאה
+    if (data.error) {
+        console.error("❌ Google Error:", data.error.message);
+        throw new Error(data.error.message);
     }
-    
-    throw new Error("כל הניסיונות נכשלו. בדוק את ה-API Key שלך ב-Google AI Studio.");
+
+    // חילוץ הטקסט
+    return data.candidates[0].content.parts[0].text;
 }
 
-// נתיב 1: מפרטים (Spec Lookup) - הכי מדויק שיש
+// פונקציית ניקוי (הדבר היחיד שהשארנו מהחדש, כי זה מונע קריסות)
+function extractJSON(text) {
+    try {
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        return JSON.parse(text.replace(/```json|```/g, '').trim());
+    } catch (e) {
+        return null;
+    }
+}
+
+// === נתיב 1: מפרטים ===
 app.post('/get-specs', async (req, res) => {
     const { brand, model, year } = req.body;
-    console.log(`🔍 מפרט מדויק: ${brand} ${model} ${year}`);
+    console.log(`🔍 מפרט: ${brand} ${model} ${year}`);
 
     try {
-        if (!API_KEY) throw new Error("Missing API Key");
-
-        // פרומפט מוקפד לנתונים מישראל בלבד
-        const prompt = `
-        Act as an Israeli automotive database.
-        Task: List the EXACT engine options and trim levels sold in Israel for:
-        Vehicle: ${year} ${brand} ${model}
+        // הפרומפט המקורי שעבד
+        const prompt = `Return a JSON list of engine options and trim levels for a ${year} ${brand} ${model} in Israel. Format: {"engines": ["1.6L Petrol", "Hybrid"], "trims": ["Style", "Premium"]}`;
         
-        Requirements:
-        1. Market: Israel (IL) ONLY.
-        2. Engines: Format as "Volume Type (HP)" (e.g., "1.6L Petrol (132hp)", "1.8L Hybrid").
-        3. Trims: List exact commercial names in English/Hebrew transliteration.
-        4. Accuracy: Do not hallucinate trims that didn't exist in ${year}.
-        
-        Output Schema (JSON):
-        {
-            "engines": ["string"],
-            "trims": ["string"]
-        }
-        `;
+        const text = await askGoogle(prompt);
+        const specs = extractJSON(text);
 
-        const jsonString = await callGoogleAI(prompt);
-        const specs = JSON.parse(jsonString); // בגלל ה-Mode החדש, זה תמיד יהיה JSON תקין
+        if (!specs) throw new Error("JSON parsing failed");
 
         res.json({ success: true, data: specs });
 
     } catch (error) {
-        console.error("❌ כשל סופי במפרט:", error.message);
-        // אם הכל נכשל - מחזירים שגיאה ללקוח כדי שלא יקבל נתונים שקריים
-        res.status(500).json({ success: false, error: "לא ניתן לשלוף נתונים כרגע" });
+        console.error("⚠️ תקלה במפרט:", error.message);
+        // במקרה חירום - מחזירים רשימה בסיסית שלא תתקע את המשתמש
+        res.json({ 
+            success: true, 
+            data: { engines: ["בנזין", "היברידי", "דיזל"], trims: ["דגם בסיס", "דגם מפואר"] },
+            is_fallback: true
+        });
     }
 });
 
-// נתיב 2: ניתוח (Analysis)
+// === נתיב 2: ניתוח ===
 app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year, engine, trim, faults } = req.body;
         
-        const prompt = `
-        Act as an expert Israeli mechanic.
-        Vehicle: ${brand} ${model} ${year}, Engine: ${engine}, Trim: ${trim}.
-        Reported Faults: ${faults?.join(', ') || "None"}.
-        
-        Output JSON:
-        {
-            "reliability_score": number (0-100),
-            "summary": "Short Hebrew summary",
-            "common_faults": ["Hebrew fault 1 - Price", "Hebrew fault 2 - Price"],
-            "negotiation_tip": "Hebrew tip"
-        }
-        `;
+        const prompt = `You are a mechanic. Car: ${brand} ${model} ${year} ${engine} ${trim}. Faults: ${faults}. Return JSON: {"reliability_score": 85, "summary": "Hebrew summary", "common_faults": ["Fault 1"], "negotiation_tip": "Tip"}`;
 
-        const jsonString = await callGoogleAI(prompt);
-        const result = JSON.parse(jsonString);
+        const text = await askGoogle(prompt);
+        const result = extractJSON(text);
         
         res.json({ success: true, aiAnalysis: result });
 
