@@ -8,102 +8,104 @@
 </head>
 <body>
 
-<div id="loader">
-    <div class="spinner"></div>
-    <div id="loader-text" style="margin-top:20px; color:var(--accent); font-weight:bold;">🤖 מנתח ב-AI...</div>
-</div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="loader-text" style="margin-top:20px; color:var(--accent); font-weight:bold;">🤖 המוסכניק חושב...</div>
+    </div>
 
-<div id="screen-input" class="container">
-    <header><h1>🚗 CarCheck <span>PRO</span></h1></header>
-    
-    <div class="plate-box">
-        <div class="plate-inner">
-            <input id="plate" class="plate-input" type="tel" placeholder="000-00-000" maxlength="10">
+    <div id="screen-input" class="container">
+        <header>
+            <h1>🚗 CarCheck <span>PRO</span></h1>
+        </header>
+        
+        <div class="plate-box">
+            <div class="plate-inner">
+                <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8">
+            </div>
         </div>
-    </div>
-    
-    <div class="field-group">
-        <label>1. יצרן</label>
-        <div id="brand-trigger" class="selector-trigger"><span>בחר יצרן...</span> <span>▼</span></div>
-        <div id="brand-popup" class="popup-grid">
-            <input type="text" id="brand-search" class="search-input" placeholder="חפש יצרן...">
-            <div id="brand-grid" class="grid-layout"></div>
+        
+        <div class="field-group">
+            <label>1. יצרן</label>
+            <div id="brand-trigger" class="selector-trigger"><span>בחר יצרן...</span> <span>▼</span></div>
+            <div id="brand-popup" class="popup-grid">
+                <input type="text" id="brand-search" class="search-input" placeholder="חפש...">
+                <div id="brand-grid" class="grid-layout"></div>
+            </div>
+            <input type="hidden" id="val-b">
         </div>
-        <input type="hidden" id="val-b">
-    </div>
 
-    <div class="field-group">
-        <label>2. דגם</label>
-        <div id="model-trigger" class="selector-trigger disabled"><span>בחר דגם...</span> <span>▼</span></div>
-        <div id="model-popup" class="popup-grid">
-            <input type="text" id="model-search" class="search-input" placeholder="חפש דגם...">
-            <div id="model-grid" class="grid-layout"></div>
+        <div class="field-group">
+            <label>2. דגם</label>
+            <div id="model-trigger" class="selector-trigger disabled"><span>בחר דגם...</span> <span>▼</span></div>
+            <div id="model-popup" class="popup-grid">
+                <input type="text" id="model-search" class="search-input" placeholder="חפש...">
+                <div id="model-grid" class="grid-layout"></div>
+            </div>
+            <input type="hidden" id="val-m">
         </div>
-        <input type="hidden" id="val-m">
-    </div>
 
-    <div class="field-group">
-        <label>3. שנת ייצור</label>
-        <div id="year-trigger" class="selector-trigger disabled"><span>בחר שנה...</span> <span>▼</span></div>
-        <div id="year-popup" class="popup-grid">
-            <div id="year-grid" class="grid-layout"></div>
+        <div class="field-group">
+            <label>3. שנה</label>
+            <div id="year-trigger" class="selector-trigger disabled"><span>בחר שנה...</span> <span>▼</span></div>
+            <div id="year-popup" class="popup-grid"><div id="year-grid" class="grid-layout"></div></div>
+            <input type="hidden" id="val-y">
         </div>
-        <input type="hidden" id="val-y">
-    </div>
 
-    <div class="field-group">
-        <label>4. מנוע (AI ✨)</label>
-        <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
-        <div id="engine-popup" class="popup-grid">
-            <div id="engine-grid" class="grid-layout"></div>
+        <div class="field-group">
+            <label>4. מנוע</label>
+            <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
+            <div id="engine-popup" class="popup-grid"><div id="engine-grid" class="grid-layout"></div></div>
+            <input type="hidden" id="val-e">
         </div>
-        <input type="hidden" id="val-e">
-    </div>
 
-    <div class="field-group">
-        <label>5. רמת גימור (AI ✨)</label>
-        <div id="trim-trigger" class="selector-trigger disabled"><span>✨ בחר גימור...</span> <span>▼</span></div>
-        <div id="trim-popup" class="popup-grid">
-            <div id="trim-grid" class="grid-layout"></div>
+        <div class="field-group">
+            <label>5. גימור</label>
+            <div id="trim-trigger" class="selector-trigger disabled"><span>✨ בחר גימור...</span> <span>▼</span></div>
+            <div id="trim-popup" class="popup-grid"><div id="trim-grid" class="grid-layout"></div></div>
+            <input type="hidden" id="val-t">
         </div>
-        <input type="hidden" id="val-t">
+
+        <div class="field-group">
+            <label>6. הערות</label>
+            <textarea id="user-notes" class="text-input" placeholder="רשום כאן הערות מהמודעה..."></textarea>
+        </div>
+
+        <button id="btn-ai" class="btn-main" disabled>🚀 נתח ב-AI</button>
+        
+        <div id="ai-panel" class="ai-feedback-box" style="display: none;">
+            <div class="ai-header">🤖 חוות דעת:</div>
+            <div id="ai-content"></div>
+            <button id="btn-continue-ai" class="btn-main success" style="margin-top:15px;">התחל בדיקה 🏁</button>
+        </div>
+
+        <button id="btn-skip" class="btn-outline">📋 דלג ישר לבדיקה</button>
     </div>
 
-    <button id="btn-ai" class="btn-main" disabled>🚀 נתח נתונים ב-AI</button>
-    
-    <div id="ai-panel" class="ai-feedback-box" style="display: none;">
-        <div class="ai-header">🤖 סיכום מוסכניק:</div>
-        <div id="ai-content"></div>
-        <button id="btn-continue" class="btn-main success" style="margin-top:15px;">המשך לבדיקה 🏁</button>
+    <div id="screen-check" class="container" style="display:none;">
+        <header>
+            <h1>📋 בדיקת <span>שטח</span></h1>
+        </header>
+        <div id="checklist-content"></div>
     </div>
 
-    <button id="btn-skip" class="btn-outline">📋 דלג לבדיקה ידנית</button>
-</div>
-
-<div id="screen-check" class="container" style="display:none;">
-    <header><h1>📋 בדיקת <span>שטח</span></h1></header>
-    <div id="checklist-content"></div>
-    <div style="height: 100px;"></div>
-    <div class="sticky-footer">
-        <button id="btn-finish" class="btn-main success">📊 סיום וחשב תוצאה</button>
+    <div id="screen-result" class="container" style="display:none;">
+        <header>
+            <h1>🏆 סיכום <span>בדיקה</span></h1>
+        </header>
+        
+        <div id="final-gauge" class="final-gauge">0</div>
+        <h2 id="result-status" style="text-align:center;"></h2>
+        
+        <div id="defects-container" class="defects-list" style="display:none;">
+            <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ רשימת ריג'קטים:</h3>
+            <ul id="defects-ul"></ul>
+        </div>
+        
+        <button id="btn-share" class="btn-main">📍 נווט למכון בדיקה</button>
+        <button id="btn-restart" class="btn-outline" style="margin-top:10px;">🔄 בדיקה חדשה</button>
     </div>
-</div>
 
-<div id="screen-result" class="container" style="display:none;">
-    <header><h1>🏆 תוצאות <span>בדיקה</span></h1></header>
-    <div id="final-gauge" class="final-gauge">0</div>
-    <h2 id="result-status" style="text-align:center;"></h2>
-    
-    <div id="defects-container" class="defects-list" style="display:none;">
-        <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ליקויים ועלויות:</h3>
-        <ul id="defects-ul"></ul>
-    </div>
-    
-    <button id="btn-share" class="btn-main">📍 נווט למכון הבדיקה</button>
-    <button id="btn-restart" class="btn-outline" style="margin-top:10px;">🔄 בדיקה חדשה</button>
-</div>
-
-<script type="module" src="app.js"></script>
+    <script type="module" src="app.js"></script>
 
 </body>
 </html>
