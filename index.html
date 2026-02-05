@@ -32,6 +32,7 @@
         .grid-loader { grid-column: 1/-1; text-align: center; padding: 20px; color: var(--accent); display:flex; justify-content:center; align-items:center; gap:10px; }
         .manual-entry { grid-column: 1 / -1; background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px dashed var(--accent); }
         .btn-main { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 17px; font-weight: 700; cursor: pointer; color: white; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4); margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s; letter-spacing: 0.5px; }
+        .btn-main:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
         .btn-outline { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); margin-top: 15px; color: var(--text-muted); width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
         
         #screen-check { display: none; width: 100%; flex-direction: column; align-items: center; }
@@ -99,7 +100,7 @@
     </div>
 
     <div class="field-group">
-        <label>4. תת-דגם / רמת גימור (אופציונלי)</label>
+        <label>4. תת-דגם (בחירה ידנית)</label>
         <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר או הקלד...</span> <span class="arrow">▼</span></div>
         <div id="submodel-popup" class="popup-grid">
             <input type="text" class="search-input" placeholder="לדוגמה: Premium, GLX, בנזין..." onkeyup="window.filterGrid('submodel', this.value)">
@@ -108,7 +109,7 @@
         <input type="hidden" id="val-s">
     </div>
     
-    <button class="btn-main" onclick="window.startDeepAI()">🚀 נתח נתונים ב-AI</button>
+    <button id="btn-ai" class="btn-main" onclick="window.startDeepAI()">🚀 נתח נתונים ב-AI</button>
     <button class="btn-main btn-outline" onclick="window.goToChecklist()">📋 דלג לבדיקה ידנית</button>
     <div style="text-align:center; margin-top:15px;"><span onclick="window.clearAll()" style="color:var(--text-muted); font-size:13px; cursor:pointer; text-decoration:underline;">🔄 נקה טופס</span></div>
     <div id="ai-panel" style="margin-top: 30px;"></div>
@@ -201,7 +202,7 @@ const subModelData = {
     "Atto 3": ["Comfort", "Design"],
     "Geometry C": ["350 Pro", "460 Pro", "460 Pure"],
     
-    // רשימה גנרית למקרה של רכב לא מוכר
+    // ברירת מחדל
     "default": ["בנזין אוטומט", "בנזין ידני", "טורבו", "היברידי", "דיזל", "חשמלי", "Premium", "Executive", "Exclusive", "GLX", "LS", "LT", "Sport", "Luxury"]
 };
 
@@ -321,10 +322,14 @@ window.shiftY = function(n) { yBase += (n * 9); renderYears(); };
 window.startDeepAI = async function() {
     const b = document.getElementById('val-b').value;
     const m = document.getElementById('val-m').value;
-    const s = document.getElementById('val-s').value; // יכול להיות ריק
+    const s = document.getElementById('val-s').value;
     const y = document.getElementById('val-y').value;
     
     if(!b || !m || !y) return alert("חובה לבחור יצרן, דגם ושנה!");
+    
+    // מניעת לחיצה כפולה
+    const btn = document.getElementById('btn-ai');
+    btn.disabled = true;
     document.getElementById('loader').style.display = 'flex';
     
     try {
@@ -351,7 +356,8 @@ window.startDeepAI = async function() {
     } catch(e) { 
         alert("שגיאה בחיבור ל-AI"); 
     } finally { 
-        document.getElementById('loader').style.display = 'none'; 
+        document.getElementById('loader').style.display = 'none';
+        btn.disabled = false; // שחרור הכפתור
     }
 };
 
