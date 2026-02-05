@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-// שימוש בספרייה הרשמית של גוגל - הכי בטוח
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
@@ -14,9 +13,9 @@ const API_KEY = process.env.GEMINI_API_KEY;
 
 // אתחול המנוע
 const genAI = new GoogleGenerativeAI(API_KEY);
+// שימוש במודל flash היציב
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// פונקציית עזר לניקוי JSON
 function extractJSON(text) {
     try {
         const match = text.match(/\{[\s\S]*\}/);
@@ -27,18 +26,17 @@ function extractJSON(text) {
     }
 }
 
-// נתיב 1: מפרטים (Spec Lookup)
+// נתיב 1: מפרטים
 app.post('/get-specs', async (req, res) => {
-    const { brand, model, year } = req.body;
-    console.log(`🔍 מחפש מפרט: ${brand} ${model} ${year}`);
+    const { brand, model: carModel, year } = req.body;
+    console.log(`🔍 מפרט: ${brand} ${carModel} ${year}`);
 
     try {
-        if (!API_KEY) throw new Error("חסר מפתח API בשרת");
+        if (!API_KEY) throw new Error("Missing API Key");
 
         const prompt = `
-        List ONLY the engine options (volume + type) and trim levels for a ${year} ${brand} ${model} sold in Israel.
-        Return valid JSON only: {"engines": ["..."], "trims": ["..."]}
-        Do not include explanations.
+        List ONLY engine options (volume+type) and trims for ${year} ${brand} ${carModel} in Israel.
+        JSON format: {"engines": ["..."], "trims": ["..."]}
         `;
 
         const result = await model.generateContent(prompt);
@@ -46,42 +44,39 @@ app.post('/get-specs', async (req, res) => {
         const text = response.text();
         
         const specs = extractJSON(text);
-        if (!specs) throw new Error("JSON לא תקין");
+        if (!specs) throw new Error("Invalid JSON");
 
         res.json({ success: true, data: specs });
 
     } catch (error) {
-        console.error("❌ שגיאה במפרט:", error.message);
-        // Fallback למקרה של תקלה
+        console.error("❌ Error:", error.message);
         res.json({ 
             success: true, 
-            data: { engines: ["בנזין", "היברידי", "טורבו"], trims: ["דגם בסיס", "דגם מפואר"] },
+            data: { engines: ["בנזין", "היברידי"], trims: ["Basic", "Premium"] },
             is_fallback: true
         });
     }
 });
 
-// נתיב 2: ניתוח (Analysis)
+// נתיב 2: ניתוח
 app.post('/analyze-ai', async (req, res) => {
     try {
-        const { brand, model, year, engine, trim, faults } = req.body;
-        console.log(`🤖 מנתח רכב...`);
-
+        const { brand, model: carModel, year, engine, trim, faults } = req.body;
+        
         const prompt = `
-        פעל כשמאי רכב. רכב: ${brand} ${model} שנת ${year} (${engine}), גימור: ${trim}.
-        תקלות: ${faults && faults.length ? faults.join(',') : "ללא"}.
-        החזר JSON: {"reliability_score": 85, "summary": "...", "common_faults": ["..."], "negotiation_tip": "..."}`;
+        שמאי רכב: ${brand} ${carModel} ${year} (${engine}), ${trim}.
+        תקלות: ${faults?.join(',') || "אין"}.
+        JSON: {"reliability_score": 80, "summary": "...", "common_faults": ["..."], "negotiation_tip": "..."}`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         
         const jsonResult = extractJSON(text);
-
         res.json({ success: true, aiAnalysis: jsonResult });
 
     } catch (error) {
-        console.error("❌ שגיאה בניתוח:", error.message);
+        console.error("Analysis Error:", error);
         res.status(500).json({ success: false });
     }
 });
