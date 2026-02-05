@@ -1,5 +1,6 @@
 import { CAR_DATA, CHECKLIST_CONFIG } from './config.js';
 
+// --- משתנים גלובליים ---
 let selection = { brand: '', model: '', year: '', engine: '', trim: '' };
 let currentEngines = [];
 let currentTrims = [];
@@ -7,32 +8,54 @@ let score = 100;
 let totalCost = 0;
 let defects = [];
 
+// משתנים ייחודיים לסליידר החדש
+let flatChecklist = [];
+let currentTaskIndex = 0;
+
+// --- אתחול ---
 document.addEventListener('DOMContentLoaded', () => {
     setupListeners();
 });
 
 function setupListeners() {
+    // פתיחת תפריטים
     ['brand', 'model', 'year', 'engine', 'trim'].forEach(type => {
         document.getElementById(`${type}-trigger`).addEventListener('click', () => openPicker(type));
     });
 
+    // חיפוש
     ['brand', 'model'].forEach(type => {
         document.getElementById(`${type}-search`).addEventListener('keyup', (e) => filterGrid(type, e.target.value));
     });
 
+    // כפתורים
     document.getElementById('btn-ai').addEventListener('click', startAnalysis);
-    document.getElementById('btn-skip').addEventListener('click', goToChecklist);
-    document.getElementById('btn-continue').addEventListener('click', goToChecklist);
-    document.getElementById('btn-finish').addEventListener('click', finishCheck);
-    document.getElementById('btn-share').addEventListener('click', () => window.open("https://www.waze.com/ul?q=מכון%20בדיקת%20רכב", "_blank"));
-    document.getElementById('btn-restart').addEventListener('click', () => location.reload());
+    document.getElementById('btn-skip').addEventListener('click', goToChecklist); // זה מפעיל את הסליידר
+    // אם יש לך כפתור "המשך" בפאנל AI:
+    const btnContinue = document.getElementById('btn-continue');
+    if(btnContinue) btnContinue.addEventListener('click', goToChecklist);
 
+    document.getElementById('btn-finish').addEventListener('click', finishCheck);
+    
+    // כפתור Waze
+    document.getElementById('btn-share').addEventListener('click', () => {
+        window.open("https://www.waze.com/ul?q=מכון%20בדיקת%20רכב", "_blank");
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+        location.reload();
+    });
+
+    // סגירת פופאפים
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.field-group') && !e.target.closest('.popup-grid')) {
             document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
         }
     });
 }
+
+// --- (כאן שים את כל פונקציות ה-Picker: openPicker, selectValue וכו' - הן לא השתנו) ---
+// ... (אני מדלג עליהן כדי לא להעמיס, תשאיר אותן כמו שהן) ...
 
 function openPicker(type) {
     if(document.getElementById(`${type}-trigger`).classList.contains('disabled')) return;
@@ -62,7 +85,7 @@ function createItem(grid, val, type) {
     grid.appendChild(d);
 }
 
-function selectValue(type, val) {
+async function selectValue(type, val) {
     selection[type] = val;
     document.getElementById(`val-${type.charAt(0)}`).value = val;
     document.getElementById(`${type}-trigger`).querySelector('span').innerText = val;
@@ -103,7 +126,7 @@ function checkForm() {
     document.getElementById('btn-ai').disabled = !ready;
 }
 
-// AI
+// --- AI (נשאר אותו דבר) ---
 async function startAnalysis() {
     const userNotes = document.getElementById('user-notes').value;
     document.getElementById('loader').style.display = 'flex';
@@ -141,81 +164,126 @@ function renderAI(ai) {
         </div>
     `;
     document.getElementById('ai-panel').scrollIntoView({behavior:'smooth'});
+    // וודא שכפתור ההמשך מחובר לפונקציה החדשה
+    document.getElementById('btn-continue').onclick = goToChecklist; 
 }
 
-// יצירת הכרטיסיות החדשות
+
+// ============================================================
+// כאן נמצא הקוד החדש של הסליידר (במקום הלוגיקה הישנה)
+// ============================================================
+
 function goToChecklist() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     window.scrollTo(0,0);
-    const container = document.getElementById('checklist-content');
-    if(container.innerHTML !== '') return;
-
-    CHECKLIST_CONFIG.forEach((cat, cIdx) => {
-        container.innerHTML += `<div class="category-header"><h3>${cat.category}</h3></div>`;
-        cat.items.forEach((item, iIdx) => {
-            const id = `task-${cIdx}-${iIdx}`;
-            const card = document.createElement('div');
-            card.className = 'task-card';
-            card.id = `card-${id}`;
-            card.innerHTML = `
-                <div class="task-header"><span class="task-number">#${iIdx+1}</span><h4 class="task-title">${item.name}</h4></div>
-                <div class="task-details">
-                    <div class="detail-row"><span class="icon">📍</span> ${item.location}</div>
-                    <div class="detail-row"><span class="icon">🖐️</span> ${item.action}</div>
-                </div>
-                <div class="buttons-row">
-                    <button class="btn-decision btn-good" onclick="window.handleDecision('${id}', true, ${item.weight}, '${item.name}', 0)">✅ ${item.ok}</button>
-                    <button class="btn-decision btn-bad" onclick="window.handleDecision('${id}', false, ${item.weight}, '${item.name}', ${item.cost})">❌ ${item.notOk}</button>
-                </div>
-            `;
-            container.appendChild(card);
+    
+    // 1. הופכים את הקטגוריות לרשימה שטוחה אחת ארוכה
+    flatChecklist = [];
+    CHECKLIST_CONFIG.forEach(cat => {
+        cat.items.forEach(item => {
+            flatChecklist.push({ ...item, category: cat.category });
         });
     });
+
+    // מתחילים מהקלף הראשון
+    currentTaskIndex = 0;
+    renderCurrentTask();
 }
 
-window.handleDecision = (id, isGood, weight, name, cost) => {
-    const card = document.getElementById(`card-${id}`);
-    const btnGood = card.querySelector('.btn-good');
-    const btnBad = card.querySelector('.btn-bad');
+function renderCurrentTask() {
+    const container = document.getElementById('checklist-content');
+    container.innerHTML = ''; // מנקה את הקלף הקודם
 
-    if (card.dataset.status === 'bad') { score += weight; totalCost -= cost; defects = defects.filter(d => d.name !== name); }
-    
-    if (isGood) {
-        card.dataset.status = 'good';
-        btnGood.classList.add('selected'); btnBad.classList.remove('selected');
-        card.classList.add('completed-good'); card.classList.remove('completed-bad');
-    } else {
-        card.dataset.status = 'bad';
-        btnBad.classList.add('selected'); btnGood.classList.remove('selected');
-        card.classList.add('completed-bad'); card.classList.remove('completed-good');
-        score -= weight; totalCost += cost; defects.push({name, cost});
+    // אם סיימנו את כל הקלפים
+    if (currentTaskIndex >= flatChecklist.length) {
+        finishCheck();
+        return;
     }
 
+    const item = flatChecklist[currentTaskIndex];
+    const progress = Math.round(((currentTaskIndex + 1) / flatChecklist.length) * 100);
+
+    // יצירת ה-HTML של הקלף הבודד
+    const cardHTML = `
+        <div class="progress-bar-container">
+            <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
+            <div class="progress-bar"><div class="fill" style="width:${progress}%"></div></div>
+        </div>
+
+        <div id="active-card" class="task-card slide-in-animation">
+            <div class="category-label" style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:12px; margin-bottom:5px;">${item.category}</div>
+            <div class="task-header">
+                <h4 class="task-title" style="font-size:22px; margin-top:5px;">${item.name}</h4>
+            </div>
+            
+            <div class="task-details" style="min-height: 100px;">
+                <div class="detail-row" style="margin-bottom:15px; font-size:16px;"><span class="icon">📍</span> ${item.location}</div>
+                <div class="detail-row" style="font-size:16px;"><span class="icon">🖐️</span> ${item.action}</div>
+            </div>
+
+            <div class="buttons-row" style="margin-top:25px;">
+                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">
+                    <div style="font-size:20px;">✅ תקין</div>
+                </button>
+                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">
+                    <div style="font-size:20px;">❌ תקלה</div>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = cardHTML;
+}
+
+// הפונקציה שמטפלת בהחלקה (במקום handleDecision הישנה)
+window.handleSwipe = (isGood) => {
+    const card = document.getElementById('active-card');
+    const item = flatChecklist[currentTaskIndex];
+
+    // 1. אנימציית יציאה
+    if (isGood) {
+        card.classList.add('slide-out-right'); // עף ימינה (חיובי)
+    } else {
+        card.classList.add('slide-out-left'); // עף שמאלה (שלילי)
+        // חישוב נזק
+        score -= item.weight;
+        totalCost += item.cost;
+        defects.push({ name: item.name, cost: item.cost });
+    }
+
+    // 2. המתנה קצרה לאנימציה ואז טעינת הקלף הבא
     setTimeout(() => {
-        const next = card.nextElementSibling;
-        if(next && next.classList.contains('task-card')) next.scrollIntoView({behavior: 'smooth', block: 'center'});
-    }, 400);
+        currentTaskIndex++;
+        renderCurrentTask();
+    }, 300);
 };
 
+// --- מסך תוצאות ---
 function finishCheck() {
     document.getElementById('screen-check').style.display = 'none';
     document.getElementById('screen-result').style.display = 'block';
-    window.scrollTo(0,0);
-
+    
     const final = Math.max(0, score);
     const gauge = document.getElementById('final-gauge');
     gauge.innerText = final;
     
     let color = final > 85 ? "var(--success)" : (final > 65 ? "var(--plate-yellow)" : "var(--danger)");
     gauge.style.color = color; gauge.style.borderColor = color;
-    document.getElementById('result-status').innerText = final > 85 ? "רכב מציאה! ✅" : "דורש בדיקה ⚠️";
+    document.getElementById('result-status').innerText = final > 85 ? "רכב במצב טוב! ✅" : "יש ליקויים משמעותיים ⚠️";
 
     const ul = document.getElementById('defects-ul');
     ul.innerHTML = '';
+    
     if(defects.length > 0) {
         document.getElementById('defects-container').style.display = 'block';
-        defects.forEach(d => ul.innerHTML += `<li>${d.name} <span style="float:left">₪${d.cost}</span></li>`);
-        ul.innerHTML += `<div style="margin-top:10px; font-weight:bold; border-top:1px solid #555; padding-top:5px;">סה"כ תיקונים: ₪${totalCost.toLocaleString()}</div>`;
+        defects.forEach(d => {
+            ul.innerHTML += `<li>${d.name} <span style="float:left; color:#facc15;">₪${d.cost}</span></li>`;
+        });
+        ul.innerHTML += `<div style="margin-top:15px; border-top:1px solid #555; padding-top:10px; font-weight:bold; font-size:18px;">
+            סה"כ תיקונים: <span style="float:left; color:#ef4444;">₪${totalCost.toLocaleString()}</span>
+        </div>`;
+    } else {
+        document.getElementById('defects-container').style.display = 'none';
     }
 }
