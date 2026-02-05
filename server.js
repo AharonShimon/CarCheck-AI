@@ -14,15 +14,18 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 const API_KEY = process.env.GEMINI_API_KEY; 
 
 if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. Mode: Analysis ONLY.");
+else console.log("✅ Server started. Analysis Mode.");
 
 app.post('/analyze-ai', async (req, res) => {
-    // השרת מקבל את כל השדות, כולל תת-הדגם שהוקלד ידנית
-    const { brand, model, submodel, year } = req.body;
+    let { brand, model, submodel, year } = req.body;
     
-    // הרכבת השאילתה המלאה
-    const fullCarName = `${brand} ${model} ${submodel} (${year})`;
-    console.log(`🚀 AI Analyzing: ${fullCarName}`);
+    // תיקון: אם לא נבחר תת-דגם, משאירים ריק
+    if (!submodel || submodel === "null") submodel = "";
+
+    // בניית שם הרכב לניתוח
+    const fullCarName = submodel ? `${brand} ${model} ${submodel} (${year})` : `${brand} ${model} (${year})`;
+    
+    console.log(`🚀 Analyzing: ${fullCarName}`);
     
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
@@ -31,12 +34,13 @@ app.post('/analyze-ai', async (req, res) => {
         Act as an expert Israeli vehicle inspector. 
         Target Vehicle: "${fullCarName}".
         
-        Task: Provide a professional reliability analysis specifically for the Israeli market conditions.
+        Task: Provide a reliability analysis for the Israeli market.
+        IMPORTANT: If specific trim ("${submodel}") is missing, analyze the general model for the year ${year}.
         
-        Return strict JSON only (no markdown, no extra text):
+        Return strict JSON only:
         { 
             "reliability_score": 85, 
-            "summary": "Short professional summary in Hebrew (2 sentences)", 
+            "summary": "Short Hebrew summary regarding reliability and maintenance", 
             "common_faults": ["Fault 1 (Hebrew)", "Fault 2 (Hebrew)", "Fault 3 (Hebrew)"], 
             "pros": ["Pro 1 (Hebrew)", "Pro 2 (Hebrew)"], 
             "cons": ["Con 1 (Hebrew)", "Con 2 (Hebrew)"] 
@@ -64,11 +68,11 @@ app.post('/analyze-ai', async (req, res) => {
         res.json({ 
             success: true, 
             aiAnalysis: {
-                reliability_score: 80,
-                summary: "לא ניתן היה לבצע ניתוח מעמיק כרגע. מוצג מידע כללי על סמך נתוני יצרן.",
-                common_faults: ["בלאי טבעי בהתאם לשנתון", "מערכת קירור", "רגישות לחלפים לא מקוריים"],
-                pros: ["סחירות טובה", "חלפים זמינים"],
-                cons: ["צריכת דלק", "פלסטיקה"]
+                reliability_score: 75,
+                summary: "לא התקבל ניתוח ספציפי עקב תקשורת. מוצג מידע כללי.",
+                common_faults: ["בלאי טבעי", "מערכת קירור", "פלסטיקה"],
+                pros: ["סחירות", "זמינות חלפים"],
+                cons: ["צריכת דלק"]
             }
         });
     }
