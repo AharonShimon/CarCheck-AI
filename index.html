@@ -99,9 +99,10 @@
     </div>
 
     <div class="field-group">
-        <label>4. תת-דגם (נטען מה-AI לפי השנה)</label>
-        <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר תת-דגם...</span> <span class="arrow">▼</span></div>
+        <label>4. תת-דגם / רמת גימור</label>
+        <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר או הקלד...</span> <span class="arrow">▼</span></div>
         <div id="submodel-popup" class="popup-grid">
+            <input type="text" class="search-input" placeholder="הקלד תת-דגם או בחר מהרשימה..." onkeyup="window.filterGrid('submodel', this.value)">
             <div id="submodel-grid" class="grid-layout"></div>
         </div>
         <input type="hidden" id="val-s">
@@ -109,6 +110,7 @@
     
     <button class="btn-main" onclick="window.startDeepAI()">🚀 נתח נתונים ב-AI</button>
     <button class="btn-main btn-outline" onclick="window.goToChecklist()">📋 דלג לבדיקה ידנית</button>
+    <div style="text-align:center; margin-top:15px;"><span onclick="window.clearAll()" style="color:var(--text-muted); font-size:13px; cursor:pointer; text-decoration:underline;">🔄 נקה טופס</span></div>
     <div id="ai-panel" style="margin-top: 30px;"></div>
 </div>
 
@@ -130,7 +132,7 @@
 </div>
 
 <script>
-// === 1. מאגר יצרנים ודגמים מקומי ===
+// === 1. מאגר יצרנים ===
 const carData = {
     "טויוטה": ["קורולה", "יאריס", "RAV4", "C-HR", "לנד קרוזר", "פריוס", "היילקס", "קאמרי", "אייגו X"],
     "יונדאי": ["i10", "i20", "i30", "איוניק 5", "איוניק 6", "טוסון", "סנטה פה", "קונה", "אלנטרה", "באיון", "סונטה"],
@@ -145,86 +147,71 @@ const carData = {
     "מיצובישי": ["אאוטלנדר", "ASX", "ספייס סטאר", "אקליפס קרוס", "טריטון", "לנסר"],
     "ניסאן": ["קשקאי", "ג'וק", "אקסטרייל", "מיקרה", "סנטרה"],
     "שברולט": ["ספארק", "טראוורס", "אקווינוקס", "בלייזר", "סילברדו", "מאליבו", "קרוז", "טראקס"],
-    "BYD": ["Atto 3", "Dolphin", "Seal"],
-    "ג'ילי": ["Geometry C"],
-    "MG": ["MG4", "ZS EV", "EHS", "Marvel R", "MG3"],
-    "טסלה": ["Model 3", "Model Y", "Model S", "Model X"],
-    "צ'רי": ["FX", "Tiggo 7 Pro", "Tiggo 8 Pro"],
     "אאודי": ["A1", "A3", "A4", "A5", "A6", "Q2", "Q3", "Q5", "Q7"],
     "ב.מ.וו": ["סדרה 1", "סדרה 3", "סדרה 5", "X1", "X3", "X5", "X6"],
     "מרצדס": ["A-Class", "C-Class", "E-Class", "GLA", "GLC", "GLE"],
     "פיג'ו": ["208", "2008", "3008", "5008", "308"],
     "רנו": ["קליאו", "קפצ'ור", "מגאן", "גרנד קופה", "ארקנה", "אוסטרל"],
-    "סיטרואן": ["C3", "C4", "C5 Aircross", "ברלינגו"]
+    "סיטרואן": ["C3", "C4", "C5 Aircross", "ברלינגו"],
+    "ג'ילי": ["Geometry C"],
+    "BYD": ["Atto 3", "Dolphin", "Seal"],
+    "טסלה": ["Model 3", "Model Y", "Model S", "Model X"],
+    "צ'רי": ["FX", "Tiggo 7", "Tiggo 8"],
+    "MG": ["MG4", "ZS EV", "EHS", "Marvel R"]
 };
 
-// === 2. צ'קליסט מלא (35 סעיפים) ===
+// === 2. המאגר הגדול של תתי-דגמים (הרחבתי את הרשימה) ===
+const subModelData = {
+    // טויוטה
+    "קורולה": ["Sun", "GLI", "Limited", "Sense", "50th Edition", "Hybrid Sun", "Hybrid GLI", "TS (סטיישן)", "Flow", "Excite"],
+    "יאריס": ["Sol", "Style", "Black Top", "Hybrid Eco", "Hybrid Style", "Cross Urban", "Sky", "Fun"],
+    "RAV4": ["Experience", "E-Motion", "E-Volve", "Hybrid GLI", "Plug-in Hybrid", "Extreme"],
+    "C-HR": ["C-Ity", "C-Hic", "Concept", "GR Sport", "Vision"],
+    "לנד קרוזר": ["Luxury", "Select", "Sahara", "Limited", "TS", "Standard", "Short"],
+    // יונדאי
+    "i10": ["Inspire", "Prime", "Supreme", "Intense", "Premium"],
+    "i20": ["Prime", "Prestige", "Supreme", "N Line", "Premium", "Insight"],
+    "i30": ["Inspire", "Premium", "N Performance", "CW (סטיישן)"],
+    "טוסון": ["Prime", "Panoramic", "Elite", "Prestige", "Luxury", "Turbo", "Premium"],
+    "איוניק 5": ["Prestige", "Luxury", "Elite", "Limited"],
+    // קיה
+    "פיקנטו": ["LX", "EX", "GT Line", "X Line", "Urban", "Top"],
+    "ספורטאז'": ["Urban", "Urban Top", "LX", "EX", "Premium", "GT Line", "Turbo", "Diesel"],
+    "נירו": ["LX", "EX", "Plug-in", "EV", "Plus", "Urban"],
+    // מאזדה
+    "2": ["Active", "Dynamic", "Pure White", "Sports"],
+    "3": ["Comfort", "Spirit", "Active", "Premium", "Spirit Black"],
+    "CX-5": ["Executive", "Luxury", "Premium", "Signature", "Black Edition"],
+    // סקודה/סיאט/פולקסווגן
+    "אוקטביה": ["Ambition", "Style", "Exclusive", "RS", "Dynamic"],
+    "גולף": ["Trendline", "Comfortline", "Life", "Style", "GTI", "R-Line"],
+    "איביזה": ["Reference", "Style", "FR", "Evo"],
+    "לאון": ["Style", "FR", "Cupra", "FR 1.5", "FR 2.0"],
+    // אחרים
+    "סוויפט": ["GLX", "GLS", "Hybrid"],
+    "מאליבו": ["LT", "LTZ"],
+    "ספארק": ["LT", "LTZ", "Premier", "LT+"],
+    "Model 3": ["RWD", "Long Range", "Performance", "Highland"],
+    "Model Y": ["RWD", "Long Range", "Performance"],
+    "Atto 3": ["Comfort", "Design"],
+    "Geometry C": ["350 Pro", "460 Pro", "460 Pure"],
+    
+    // ברירת מחדל
+    "default": ["בנזין אוטומט", "בנזין ידני", "טורבו", "היברידי", "דיזל", "חשמלי", "Premium", "Executive", "Exclusive", "GLX", "LS", "LT", "Sport", "Luxury"]
+};
+
+// === 3. צ'קליסט בדיקות ===
 const checklistData = [
-    {
-        category: "🔩 מנוע ומערכת קירור (קריטי)",
-        items: [
-            { name: "🛢️ פקק מילוי שמן ('טחינה')", weight: 25, howTo: "📍 מיקום: ראש המנוע.<br>👀 פעולה: פתח וחפש קצף לבן.", ok: "✅ תקין: פקק נקי, שחור או חום.", notOk: "❌ לא תקין: קצף לבן (כמו מיונז)." },
-            { name: "🫧 בועות במיכל עיבוי", weight: 25, howTo: "📍 מיקום: מיכל פלסטיק שקוף.<br>👀 פעולה: מנוע עובד - יש בועות במים?", ok: "✅ תקין: מים שקטים.", notOk: "❌ לא תקין: בועות אוויר עולות (כמו ג'קוזי)." },
-            { name: "🌬️ נשימת מנוע (Blow-By)", weight: 25, howTo: "👀 פעולה: הנח פקק הפוך על הפתח. הוא עף?", ok: "✅ תקין: הפקק רועד קלות במקום.", notOk: "❌ לא תקין: הפקק עף מהלחץ." },
-            { name: "⛽ ריח דלק חריף", weight: 25, howTo: "👀 פעולה: הרח סביב המנוע ובתוך הרכב.", ok: "✅ תקין: אין ריח דלק.", notOk: "❌ לא תקין: ריח חריף של בנזין." },
-            { name: "⚫ בוץ שמן (Sludge)", weight: 20, howTo: "👀 פעולה: האר לפנים המנוע. גושים שחורים?", ok: "✅ תקין: נקי וזהוב.", notOk: "❌ לא תקין: משקעים שחורים וסמיכים." },
-            { name: "📏 מדיד שמן (מפלס וצבע)", weight: 15, howTo: "📍 מיקום: ידית צהובה/כתומה.<br>👀 פעולה: בדוק גובה וצבע.", ok: "✅ תקין: צבע דבש/חום, מפלס תקין.", notOk: "❌ לא תקין: שמן שחור מדי או חסר." },
-            { name: "💧 נזילות שמן טריות", weight: 15, howTo: "👀 פעולה: הסתכל מתחת לרכב ועל הבלוק.", ok: "✅ תקין: מנוע יבש ואבקתי.", notOk: "❌ לא תקין: רטיבות שמן טרייה ומבריקה." },
-            { name: "🧪 צבע נוזל קירור", weight: 10, howTo: "👀 פעולה: הבט במיכל העיבוי.", ok: "✅ תקין: נוזל מקורי (ירוק/ורוד/כחול).", notOk: "❌ לא תקין: מי ברז שקופים או צבע חלודה." },
-            { name: "🔊 רעש מנוע (תקתוקים)", weight: 15, howTo: "👀 פעולה: הקשב למנוע בסרק.", ok: "✅ תקין: עבודה עגולה ושקטה.", notOk: "❌ לא תקין: תקתוקים מתכתיים חזקים." },
-            { name: "✊ לחץ בצנרת רדיאטור", weight: 15, howTo: "👀 פעולה: כשהמנוע חם, לחץ על הצינור העליון.", ok: "✅ תקין: גמיש מעט בלחיצה.", notOk: "❌ לא תקין: קשה כמו אבן." },
-            { name: "🌀 מאוורר רדיאטור", weight: 15, howTo: "👀 פעולה: הפעל מזגן. מאוורר עובד?", ok: "✅ תקין: עובד חזק מיד.", notOk: "❌ לא תקין: המאוורר לא מסתובב." }
-        ]
-    },
-    {
-        category: "⚙️ גיר והנעה",
-        items: [
-            { name: "🥊 מכה בשילוב הילוך", weight: 15, howTo: "👀 פעולה: העבר P-D-R. יש דפיקה?", ok: "✅ תקין: שילוב חלק.", notOk: "❌ לא תקין: דפיקה חזקה או קפיצה." },
-            { name: "⛸️ החלקה בהאצה", weight: 20, howTo: "👀 פעולה: גז חזק - טורים עולים בלי תאוצה?", ok: "✅ תקין: תאוצה מיידית.", notOk: "❌ לא תקין: המנוע צועק והרכב לא זז." },
-            { name: "🫨 רעידות בנסיעה", weight: 15, howTo: "👀 פעולה: סע ב-100 קמ\"ש.", ok: "✅ תקין: נסיעה חלקה.", notOk: "❌ לא תקין: ההגה או הרכב רועדים." },
-            { name: "🔩 רעשי ציריות", weight: 15, howTo: "👀 פעולה: סיבוב הגה מלא בנסיעה. רעש?", ok: "✅ תקין: שקט מוחלט.", notOk: "❌ לא תקין: רעש תקתוקים (קליק-קליק)." },
-            { name: "🩸 מצב שמן גיר", weight: 10, howTo: "👀 פעולה: אם יש מדיד - בדוק צבע.", ok: "✅ תקין: אדום/בהיר ונקי.", notOk: "❌ לא תקין: שמן שחור ושרוף." }
-        ]
-    },
-    {
-        category: "🛠️ שלדה ומרכב",
-        items: [
-            { name: "🧲 מבחן המגנט", weight: 15, howTo: "👀 פעולה: מגנט נופל מהפח? (שפכטל).", ok: "✅ תקין: נצמד חזק.", notOk: "❌ לא תקין: המגנט לא נצמד." },
-            { name: "🔥 נקודות ריתוך", weight: 20, howTo: "📍 מיקום: תחת הגומיות.<br>👀 פעולה: נקודות עגולות?", ok: "✅ תקין: נקודות מקוריות.", notOk: "❌ לא תקין: שטח חלק או מושחז." },
-            { name: "🔧 ברגי כנפיים", weight: 12, howTo: "👀 פעולה: צבע מקולף על הברגים?", ok: "✅ תקין: צבע מקורי.", notOk: "❌ לא תקין: סימני פתיחה ושריטות." },
-            { name: "🌊 רטיבות בתא מטען", weight: 15, howTo: "👀 פעולה: הרם שטיח. יש מים?", ok: "✅ תקין: יבש לגמרי.", notOk: "❌ לא תקין: רטיבות או חלודה." },
-            { name: "🎨 הבדלי גוון", weight: 10, howTo: "👀 פעולה: הסתכל בשמש על הדלתות.", ok: "✅ תקין: צבע אחיד.", notOk: "❌ לא תקין: הבדלים בין חלקים." },
-            { name: "📐 סימטריה במרווחים", weight: 10, howTo: "👀 פעולה: בדוק רווחים במכסה מנוע.", ok: "✅ תקין: רווחים שווים.", notOk: "❌ לא תקין: צד אחד רחב מהשני." },
-            { name: "🦀 חלודה בתחתית", weight: 15, howTo: "👀 פעולה: התכופף והסתכל למטה.", ok: "✅ תקין: נקי מריקבון.", notOk: "❌ לא תקין: חלודה מתפוררת." }
-        ]
-    },
-    {
-        category: "⚡ חשמל ופנים",
-        items: [
-            { name: "💡 נורות אזהרה", weight: 20, howTo: "👀 פעולה: האם נורה דולקת קבוע?", ok: "✅ תקין: לוח נקי.", notOk: "❌ לא תקין: נורת מנוע/כרית אוויר דולקת." },
-            { name: "❄️ מזגן (קור)", weight: 10, howTo: "👀 פעולה: מקפיא מיד?", ok: "✅ תקין: קור חזק.", notOk: "❌ לא תקין: לא מקרר מספיק." },
-            { name: "🔥 חימום", weight: 10, howTo: "👀 פעולה: מוציא חום?", ok: "✅ תקין: מחמם חזק.", notOk: "❌ לא תקין: יוצא אוויר קר." },
-            { name: "🪟 חלונות חשמל", weight: 5, howTo: "👀 פעולה: בדוק את כל ה-4.", ok: "✅ תקין: עולים חלק.", notOk: "❌ לא תקין: חלון תקוע או איטי." },
-            { name: "🔒 נעילה מרכזית", weight: 5, howTo: "👀 פעולה: נעל ופתח.", ok: "✅ תקין: הכל ננעל.", notOk: "❌ לא תקין: דלת אחת לא ננעלת." },
-            { name: "💺 מצב ריפודים", weight: 5, howTo: "👀 פעולה: קרעים או שקיעה?", ok: "✅ תקין: שלם ונקי.", notOk: "❌ לא תקין: קרעים או כתמים." },
-            { name: "🛁 נזקי הצפה", weight: 20, howTo: "👀 פעולה: הרם שטיח, חפש בוץ.", ok: "✅ תקין: נקי ויבש.", notOk: "❌ לא תקין: חול, בוץ או חלודה." }
-        ]
-    },
-    {
-        category: "🛞 צמיגים ובטיחות",
-        items: [
-            { name: "📅 תאריך צמיגים", weight: 5, howTo: "👀 פעולה: חפש 4 ספרות (למשל 1023).", ok: "✅ תקין: עד 4 שנים.", notOk: "❌ לא תקין: צמיג ישן מ-4 שנים." },
-            { name: "🌵 יובש בצמיגים", weight: 5, howTo: "👀 פעולה: חפש סדקים.", ok: "✅ תקין: גומי טרי.", notOk: "❌ לא תקין: סדקים ויובש." },
-            { name: "🍩 גלגל רזרבי", weight: 5, howTo: "👀 פעולה: בדוק בבגאז'.", ok: "✅ תקין: קיים ותקין.", notOk: "❌ לא תקין: חסר גלגל או ערכה." },
-            { name: "🎗️ חגורות בטיחות", weight: 5, howTo: "👀 פעולה: משוך חזק - ננעל?", ok: "✅ תקין: ננעל מיד.", notOk: "❌ לא תקין: לא ננעל או קרוע." },
-            { name: "🌧️ וישרים ומתיזים", weight: 5, howTo: "👀 פעולה: השפרץ מים.", ok: "✅ תקין: מנקים טוב.", notOk: "❌ לא תקין: מורחים או יבשים." }
-        ]
-    }
+    { category: "🔩 מנוע", items: [{ name: "🛢️ פקק מילוי שמן ('טחינה')", weight: 25, howTo: "פתח פקק שמן. קצף לבן?", ok: "נקי", notOk: "טחינה" }, { name: "🫧 בועות במיכל עיבוי", weight: 25, howTo: "מנוע עובד. יש בועות במים?", ok: "שקט", notOk: "בועות" }, { name: "🌬️ נשימת מנוע", weight: 25, howTo: "פקק שמן הפוך עף?", ok: "רוקד", notOk: "עף" }, { name: "⛽ ריח דלק", weight: 25, howTo: "ריח חריף?", ok: "אין", notOk: "יש" }, { name: "💧 נזילות", weight: 15, howTo: "הבט מתחת לרכב.", ok: "יבש", notOk: "רטוב" }] },
+    { category: "⚙️ גיר", items: [{ name: "🥊 מכה בשילוב", weight: 15, howTo: "P ל-D.", ok: "חלק", notOk: "דופק" }, { name: "⛸️ החלקה", weight: 20, howTo: "גז חזק.", ok: "מאיץ", notOk: "צורח" }] },
+    { category: "🛠️ שלדה", items: [{ name: "🧲 מבחן מגנט", weight: 15, howTo: "על הפח.", ok: "נצמד", notOk: "נופל" }, { name: "🔥 נקודות ריתוך", weight: 20, howTo: "תחת הגומיות.", ok: "עגול", notOk: "חלק" }, { name: "🔧 ברגי כנפיים", weight: 15, howTo: "צבע מקולף?", ok: "מקורי", notOk: "פתוח" }] },
+    { category: "⚡ חשמל", items: [{ name: "💡 נורות אזהרה", weight: 20, howTo: "לוח שעונים.", ok: "כבה", notOk: "דולק" }, { name: "❄️ מזגן", weight: 10, howTo: "מקפיא?", ok: "כן", notOk: "לא" }] },
+    { category: "🛞 צמיגים", items: [{ name: "📅 תאריך", weight: 5, howTo: "קוד 4 ספרות (שנה/שבוע).", ok: "עד 4 שנים", notOk: "ישן" }, { name: "🌵 יובש", weight: 5, howTo: "סדקים?", ok: "אין", notOk: "יש" }] }
 ];
 
-let yBase = 2018; let currentScore = 100; let badItemsNames = [];
+let yBase = 2015; let currentScore = 100; let badItemsNames = [];
 
-window.handlePicker = async function(type) {
+window.handlePicker = function(type) {
     const trigger = document.getElementById(type + '-trigger');
     if (trigger.classList.contains('disabled')) return;
     
@@ -234,50 +221,29 @@ window.handlePicker = async function(type) {
     const grid = document.getElementById(type + '-grid');
     if (grid.children.length > 0 && type !== 'year' && type !== 'submodel') return;
 
-    if (type === 'brand') {
-        renderGrid('brand', Object.keys(carData));
-    } else if (type === 'model') {
-        const brand = document.getElementById('val-b').value;
-        renderGrid('model', carData[brand] || []);
-    } else if (type === 'year') {
-        renderYears();
-    } else if (type === 'submodel') {
-        // === שולחים את השנה יחד עם היצרן והדגם ===
-        const brand = document.getElementById('val-b').value;
-        const model = document.getElementById('val-m').value;
-        const year = document.getElementById('val-y').value;
-        await fetchOptions(brand, model, year, grid);
-    }
+    if (type === 'brand') renderGrid('brand', Object.keys(carData));
+    else if (type === 'model') renderGrid('model', carData[document.getElementById('val-b').value] || []);
+    else if (type === 'year') renderYears();
+    else if (type === 'submodel') renderSubModels();
 };
 
-async function fetchOptions(brand, model, year, gridElement) {
-    gridElement.innerHTML = '<div class="grid-loader"><div class="orbit" style="width:20px;height:20px;border-width:2px;"></div> טוען מ-AI...</div>';
-    try {
-        const res = await fetch('/get-car-options', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ brand, model, year }) // שליחת השנה!
-        });
-        const data = await res.json();
-        
-        if (data.success && Array.isArray(data.options)) {
-            renderGrid('submodel', data.options, gridElement);
-        } else {
-            gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;">לא נמצאו דגמים.</div>';
-        }
-    } catch (e) {
-        gridElement.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:red;">שגיאת תקשורת</div>';
-    }
+function renderSubModels() {
+    const model = document.getElementById('val-m').value;
+    const grid = document.getElementById('submodel-grid');
+    // שליפה מהמאגר המקומי או ברירת מחדל
+    const options = subModelData[model] || subModelData["default"];
+    renderGrid('submodel', options, grid);
 }
 
 function renderGrid(type, items, targetElement = null) {
     const g = targetElement || document.getElementById(type + '-grid');
     g.innerHTML = '';
     
+    // אופציית "הוספה ידנית" תמיד תהיה למעלה אם יש טקסט בחיפוש
     const manualInput = document.querySelector(`#${type}-popup input`);
     if (manualInput && manualInput.value) {
         const d = document.createElement('div'); d.className = 'grid-item manual-entry'; d.style.gridColumn = "1/-1";
-        d.innerHTML = `הוסף: "${manualInput.value}" ➕`;
+        d.innerHTML = `הוסף ידנית: "${manualInput.value}" ➕`;
         d.onclick = () => selectItem(type, manualInput.value);
         g.appendChild(d);
     }
@@ -296,20 +262,13 @@ function selectItem(type, value) {
     document.getElementById(type + '-trigger').innerHTML = `<span>${value}</span> <span class="arrow">▼</span>`;
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
 
-    // === לוגיקת איפוס חכמה ===
+    // שרשור האיפוסים
     if (type === 'brand') {
-        resetField('model', '🏎️ בחר דגם...'); 
-        resetField('year', '📅 בחר שנה...');
-        resetField('submodel', '⚙️ תת-דגם...');
-        enableField('model');
+        resetField('model', '🏎️ בחר דגם...'); resetField('year', '📅 בחר שנה...'); resetField('submodel', '⚙️ תת-דגם...'); enableField('model');
     } else if (type === 'model') {
-        resetField('year', '📅 בחר שנה...');
-        resetField('submodel', '⚙️ תת-דגם...');
-        enableField('year'); 
+        resetField('year', '📅 בחר שנה...'); resetField('submodel', '⚙️ תת-דגם...'); enableField('year'); 
     } else if (type === 'year') {
-        resetField('submodel', '⚙️ תת-דגם...');
-        document.getElementById('submodel-grid').innerHTML = ''; 
-        enableField('submodel'); 
+        resetField('submodel', '⚙️ תת-דגם...'); enableField('submodel'); 
     }
 }
 
@@ -318,19 +277,30 @@ function resetField(type, ph) {
     const el = document.getElementById(type + '-trigger');
     el.innerHTML = `<span>${ph}</span> <span class="arrow">▼</span>`;
     el.classList.add('disabled');
+    if(type === 'submodel') document.getElementById('submodel-grid').innerHTML = '';
 }
 function enableField(type) { document.getElementById(type + '-trigger').classList.remove('disabled'); }
 
+window.clearAll = function() {
+    resetField('brand', '🚘 בחר יצרן...');
+    resetField('model', '🏎️ בחר דגם...');
+    resetField('year', '📅 בחר שנה...');
+    resetField('submodel', '⚙️ תת-דגם...');
+    document.getElementById('brand-trigger').classList.remove('disabled');
+    document.getElementById('plate').value = '';
+    document.getElementById('ai-panel').style.display = 'none';
+};
+
+// פונקציית סינון חכמה שגם מאפשרת הוספה
 window.filterGrid = function(type, query) {
     const grid = document.getElementById(type + '-grid');
-    if (type !== 'submodel') {
-        let source = (type === 'brand') ? Object.keys(carData) : (carData[document.getElementById('val-b').value] || []);
-        renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())));
-    } else {
-        Array.from(grid.querySelectorAll('.grid-item')).forEach(item => {
-            item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none';
-        });
-    }
+    
+    let source = [];
+    if (type === 'brand') source = Object.keys(carData);
+    else if (type === 'model') source = carData[document.getElementById('val-b').value] || [];
+    else if (type === 'submodel') source = subModelData[document.getElementById('val-m').value] || subModelData["default"];
+
+    renderGrid(type, source.filter(i => i.toLowerCase().includes(query.toLowerCase())));
 };
 
 function renderYears() {
@@ -354,28 +324,27 @@ window.startDeepAI = async function() {
     document.getElementById('loader').style.display = 'flex';
     
     try {
+        // שולח את כל השדות לשרת, כולל תת-הדגם שהוקלד או נבחר
         const res = await fetch('/analyze-ai', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ brand: b, model: `${m} ${s}`, year: y }) 
+            body: JSON.stringify({ brand: b, model: m, submodel: s, year: y }) 
         });
         const data = await res.json();
-        if(data.success && data.aiAnalysis) {
-            const ai = data.aiAnalysis;
-            const p = document.getElementById('ai-panel'); p.style.display = 'block';
-            p.innerHTML = `<div style="background:rgba(30, 41, 59, 0.9); padding:20px; border-radius:16px; margin-top:20px; border:1px solid var(--accent);">
-                <div style="font-size:48px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score || 'N/A'}</div>
-                <p style="text-align:center; font-size:16px; margin-bottom:20px;">${ai.summary || ''}</p>
-                <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:bold;">✅ יתרונות:</div>
-                    <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.pros || []).map(p => `<li>${p}</li>`).join('')}</ul>
-                    <div style="color:var(--danger); font-weight:bold; margin-top:10px;">❌ תקלות:</div>
-                    <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.common_faults || []).map(c => `<li>${c}</li>`).join('')}</ul>
-                </div>
-                <button class="btn-main" onclick="window.goToChecklist()">המשך לבדיקה 🏁</button>
-            </div>`;
-            p.scrollIntoView({ behavior: 'smooth' });
-        }
+        const ai = data.aiAnalysis;
+        const p = document.getElementById('ai-panel'); p.style.display = 'block';
+        p.innerHTML = `<div style="background:rgba(30, 41, 59, 0.9); padding:20px; border-radius:16px; margin-top:20px; border:1px solid var(--accent);">
+            <div style="font-size:48px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score || 'N/A'}</div>
+            <p style="text-align:center; font-size:16px; margin-bottom:20px;">${ai.summary || ''}</p>
+            <div style="text-align:right;">
+                <div style="color:var(--success); font-weight:bold;">✅ יתרונות:</div>
+                <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.pros || []).map(p => `<li>${p}</li>`).join('')}</ul>
+                <div style="color:var(--danger); font-weight:bold; margin-top:10px;">❌ תקלות:</div>
+                <ul style="font-size:14px; padding-right:20px; color:#cbd5e1;">${(ai.common_faults || []).map(c => `<li>${c}</li>`).join('')}</ul>
+            </div>
+            <button class="btn-main" onclick="window.goToChecklist()">המשך לבדיקה 🏁</button>
+        </div>`;
+        p.scrollIntoView({ behavior: 'smooth' });
     } catch(e) { 
         alert("שגיאה בחיבור ל-AI"); 
     } finally { 
@@ -426,17 +395,11 @@ window.finishCheck = () => {
     const score = Math.max(0, currentScore);
     const g = document.getElementById('final-gauge');
     g.innerText = score;
-    
     let color = score > 85 ? "var(--success)" : (score > 60 ? "#facc15" : "var(--danger)");
     g.style.borderColor = color; g.style.boxShadow = `0 0 30px ${color}`;
     
-    let txt = "רכב במצב מעולה!";
-    if(score < 85) txt = "יש כמה ריג'קטים...";
-    if(score < 60) txt = "לא לגעת ברכב!";
-    
-    const resText = document.getElementById('result-text');
-    resText.innerText = txt;
-    resText.style.color = color;
+    document.getElementById('result-text').innerText = score < 60 ? "לא לגעת!" : "רכב טוב!";
+    document.getElementById('result-text').style.color = color;
 
     const list = document.getElementById('defects-ul'); list.innerHTML = '';
     if (badItemsNames.length > 0) {
