@@ -1,4 +1,4 @@
-// config.js - גרסה סופית מורחבת v5.0 (30 יצרנים)
+// config.js - גרסה מתוקנת וסופית
 
 export const CAR_DATA = {
     // === יפניות ===
@@ -285,5 +285,4 @@ export const CHECKLIST_CONFIG = [
             }
         ]
     }
-];
 ];
