@@ -1,20 +1,10 @@
 {
-  "name": "carcheck-ai-pro",
+  "name": "carcheck-ai",
   "version": "1.0.0",
-  "description": "Car Check AI Server",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
+    "express": "^4.19.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "dotenv": "^16.4.5"
+  }
 }
