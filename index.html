@@ -51,24 +51,26 @@
             <input type="hidden" id="val-y">
         </div>
 
-        <div class="field-group">
+       <div class="field-group">
             <label>4. מנוע</label>
             <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
-            <div id="engine-popup" class="popup-grid"><div id="engine-grid" class="grid-layout"></div></div>
+            <div id="engine-popup" class="popup-grid">
+                <input type="text" id="engine-search" class="search-input" placeholder="חפש מנוע...">
+                <div id="engine-grid" class="grid-layout"></div>
+            </div>
             <input type="hidden" id="val-e">
         </div>
 
         <div class="field-group">
             <label>5. גימור</label>
             <div id="trim-trigger" class="selector-trigger disabled"><span>✨ בחר גימור...</span> <span>▼</span></div>
-            <div id="trim-popup" class="popup-grid"><div id="trim-grid" class="grid-layout"></div></div>
+            <div id="trim-popup" class="popup-grid">
+                <input type="text" id="trim-search" class="search-input" placeholder="חפש גימור...">
+                <div id="trim-grid" class="grid-layout"></div>
+            </div>
             <input type="hidden" id="val-t">
         </div>
 
-        <div class="field-group">
-            <label>6. הערות</label>
-            <textarea id="user-notes" class="text-input" placeholder="רשום כאן הערות מהמודעה..."></textarea>
-        </div>
 
         <button id="btn-ai" class="btn-main" disabled>🚀 נתח ב-AI</button>
         
