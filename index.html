@@ -52,7 +52,7 @@
     </div>
 
     <div class="field-group">
-        <label>4. סוג מנוע ונפח (AI ✨)</label>
+        <label>4. מנוע (AI ✨)</label>
         <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
         <div id="engine-popup" class="popup-grid">
             <div id="engine-grid" class="grid-layout"></div>
@@ -69,29 +69,43 @@
         <input type="hidden" id="val-t">
     </div>
 
+    <div class="field-group">
+        <label>6. הערות (אופציונלי)</label>
+        <textarea id="user-notes" class="text-input" placeholder="למשל: מכה בכנף..."></textarea>
+    </div>
+
     <button id="btn-ai" class="btn-main" disabled>🚀 נתח נתונים ב-AI</button>
-    <button id="btn-skip" class="btn-main btn-outline">📋 דלג לבדיקה ידנית</button>
     
-    <div id="ai-panel" style="margin-top: 30px; display: none;"></div>
+    <div id="ai-panel" class="ai-feedback-box" style="display: none;">
+        <div class="ai-header">🤖 סיכום מוסכניק:</div>
+        <div id="ai-content"></div>
+        <button id="btn-continue" class="btn-main success" style="margin-top:15px;">המשך לבדיקה 🏁</button>
+    </div>
+
+    <button id="btn-skip" class="btn-outline">📋 דלג לבדיקה ידנית</button>
 </div>
 
-<div id="screen-check" class="container">
+<div id="screen-check" class="container" style="display:none;">
     <header><h1>📋 בדיקת <span>שטח</span></h1></header>
     <div id="checklist-content"></div>
-    <div style="position:fixed; bottom:0; left:0; right:0; padding:20px; background:var(--bg-deep); border-top:1px solid var(--card-border); z-index:100;">
-        <button id="btn-finish" class="btn-main" style="background:var(--success)">📊 סיום וחשב תוצאה</button>
+    <div style="height: 100px;"></div>
+    <div class="sticky-footer">
+        <button id="btn-finish" class="btn-main success">📊 סיום וחשב תוצאה</button>
     </div>
 </div>
 
-<div id="screen-result" class="container">
+<div id="screen-result" class="container" style="display:none;">
     <header><h1>🏆 תוצאות <span>בדיקה</span></h1></header>
     <div id="final-gauge" class="final-gauge">0</div>
-    <h2 id="result-status"></h2>
+    <h2 id="result-status" style="text-align:center;"></h2>
+    
     <div id="defects-container" class="defects-list" style="display:none;">
-        <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ליקויים שנמצאו:</h3>
+        <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ליקויים ועלויות:</h3>
         <ul id="defects-ul"></ul>
     </div>
-    <button id="btn-restart" class="btn-main">🔄 בדיקה חדשה</button>
+    
+    <button id="btn-share" class="btn-main">📍 נווט למכון הבדיקה</button>
+    <button id="btn-restart" class="btn-outline" style="margin-top:10px;">🔄 בדיקה חדשה</button>
 </div>
 
 <script type="module" src="app.js"></script>
