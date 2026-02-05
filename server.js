@@ -8,132 +8,114 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// הגדרת קובץ ה-HTML כדף הבית
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY;
-if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. Strategy: Multi-Model Cascade (2.5 -> 2.0 -> Lite).");
 
-// === רשימת המודלים (נלקחה מה-JSON שלך) ===
-// הסרתי את הקידומת 'models/' כי ה-URL מוסיף אותה לבד
+// רשימת המודלים לניסיון (מדורג מהחכם ביותר ליציב ביותר)
 const MODELS = [
-    "gemini-2.5-flash",       // 🥇 העדיפות הראשונה: הכי חכם
-    "gemini-2.0-flash",       // 🥈 גיבוי מהיר מאוד
-    "gemini-2.5-flash-lite"   // 🥉 גיבוי קליל (כמעט תמיד פנוי)
+    "gemini-2.5-flash", 
+    "gemini-2.0-flash", 
+    "gemini-1.5-flash"
 ];
 
-// === 🧠 גיבוי חכם (ללא אינטרנט) ===
-// פועל רק אם כל 3 המודלים של גוגל קרסו
-function generateSmartBackup(brand, model, year) {
-    const b = brand.toLowerCase().trim();
+// === פונקציית גיבוי חכם (Offline) במידה וגוגל לא זמין ===
+function generateSmartBackup(brand, model, engine) {
+    const b = brand.toLowerCase();
+    const e = engine ? engine.toLowerCase() : "";
     
-    // רכב חשמלי
-    if (["byd", "geely", "tesla", "mg", "zeekr", "xpeng", "aiways", "seres", "nio", "ora"].includes(b) || model.toLowerCase().includes("ev")) {
+    if (e.includes("חשמלי") || b.includes("tesla") || b.includes("byd")) {
         return {
             reliability_score: 88,
-            summary: `ניתוח גיבוי (חשמלי): ${brand} ${model} מציג אמינות טובה במערכת ההנעה החשמלית. מומלץ להתמקד בבדיקת בריאות הסוללה (SOH) ומערכות הטעינה.`,
-            common_faults: ["שחיקת צמיגים מוגברת (משקל)", "באגים במערכת המולטימדיה", "שקע טעינה", "רעשי פלסטיקה/קרקושים"],
-            pros: ["עלויות אחזקה נמוכות", "ביצועים ושקט", "אגרת רישוי זולה"],
-            cons: ["ירידת ערך לא וודאית", "טווח ריאלי מול הצהרת יצרן"]
+            summary: "ניתוח גיבוי (חשמלי): רכב עם מערכת הנעה אמינה, אך דורש בדיקת בריאות סוללה (SOH) ועדכוני תוכנה.",
+            common_faults: ["בלאי צמיגים מואץ", "באגים במערכת המולטימדיה", "שקע טעינה"],
+            pros: ["ביצועים", "עלות נסיעה"],
+            cons: ["ירידת ערך מהירה", "טווח ריאלי"]
         };
     }
-    // רכב אסיאתי (יפני/קוריאני)
-    if (["toyota", "honda", "mazda", "subaru", "suzuki", "hyundai", "kia", "mitsubishi", "nissan", "isuzu"].includes(b)) {
-        return {
-            reliability_score: 92,
-            summary: `ניתוח גיבוי (אסיאתי): דגם ${brand} ${model} נחשב למניה בטוחה בשוק הישראלי. אמינות מכאנית גבוהה וסחירות מצוינת.`,
-            common_faults: ["קילופי צבע ולכה (נזקי שמש)", "שחיקת חומרים בתא הנוסעים", "ממיר קטליטי (בדגמים ותיקים)"],
-            pros: ["שמירת ערך וסחירות", "מזגן חזק ואמין", "עלויות טיפול סבירות"],
-            cons: ["בידוד רעשים בינוני", "צריכת דלק ממוצעת", "אבזור פשוט בדגמי הבסיס"]
-        };
-    }
-    // רכב אירופאי
-    if (["skoda", "seat", "volkswagen", "audi", "bmw", "mercedes", "peugeot", "citroen", "renault", "opel"].includes(b)) {
-        return {
-            reliability_score: 78,
-            summary: `ניתוח גיבוי (אירופאי): ${brand} ${model} מציע חווית נהיגה, בטיחות ונוחות ברמה גבוהה, אך דורש תחזוקה קפדנית ובזמן.`,
-            common_faults: ["מערכת קירור (משאבות מים/תרמוסטט)", "נזילות שמן קלות", "חיישנים ומערכת חשמל", "גיר רובוטי (מצמדים/מוח)"],
-            pros: ["איכות נסיעה ונוחות", "ביצועי מנוע (טורבו)", "תחושת יוקרה"],
-            cons: ["רגישות להזנחה", "ירידת ערך מהירה יחסית", "חלפים יקרים יותר"]
-        };
-    }
-    // ברירת מחדל כללית
     return {
-        reliability_score: 80,
-        summary: `ניתוח מערכת (גיבוי): דגם ${brand} ${model} משנת ${year} נחשב לרכב סביר. מומלץ לבצע בדיקה מקיפה במוסך מורשה לפני הקנייה.`,
-        common_faults: ["בלאי טבעי (גומיות/מתלים)", "מערכת בלמים", "מערכת חשמל בסיסית"],
-        pros: ["זמינות בשוק", "חלפים נגישים"],
-        cons: ["צריכת דלק", "בלאי פנימי"]
+        reliability_score: 75,
+        summary: "ניתוח גיבוי: לא ניתן היה להתחבר לשרת ה-AI. על סמך נתונים כלליים, הרכב דורש בדיקה מכאנית קפדנית.",
+        common_faults: ["בלאי טבעי במערכת המתלים", "נזילות שמן", "מערכת קירור"],
+        pros: ["חלפים זמינים", "סחירות סבירה"],
+        cons: ["צריכת דלק", "עלויות תחזוקה משתנות"]
     };
 }
 
-// === המנוע: ניסיון מדורג (Cascade) ===
-async function fetchWithCascade(payload) {
-    // רצים על הרשימה לפי הסדר: 2.5 -> 2.0 -> Lite
-    for (const model of MODELS) {
+// === הראוט המרכזי לניתוח AI ===
+app.post('/analyze-ai', async (req, res) => {
+    const { brand, model, year, engine, trim } = req.body;
+    
+    const carInfo = `${brand} ${model} שנת ${year}, מנוע ${engine}, רמת גימור ${trim || 'סטנדרט'}`;
+    console.log(`🚀 ניתוח חדש התחיל: ${carInfo}`);
+
+    const expertPrompt = `
+    תפקיד: אתה בוחן רכב ישראלי בכיר ומנוסה מאוד (סגנון "מוסכניק של פעם").
+    משימה: נתח את הרכב הבא: ${carInfo}.
+    
+    הנחיות קריטיות:
+    1. אל תהיה כללי! ציין מחלות ספציפיות הידועות לשילוב המנוע (${engine}) והגיר בדגם הזה (למשל: בוצה במנוע, התחממות גיר רובוטי, רצועות תזמון רטובות וכו').
+    2. התייחס לאמינות המכאנית לטווח ארוך של השנתון הזה (${year}).
+    3. מהי רמת הסחירות והביקוש של הדגם הזה בשוק הישראלי?
+    4. אם יש מערכות אלקטרוניות או בטיחותיות רגישות, ציין אותן.
+
+    החזר JSON בלבד בעברית בפורמט הזה:
+    {
+      "reliability_score": מספר (1-100),
+      "summary": "סיכום חד ומקצועי",
+      "common_faults": ["תקלה 1", "תקלה 2"],
+      "pros": ["יתרון 1"],
+      "cons": ["חיסרון 1"]
+    }
+    `;
+
+    let finalData = null;
+
+    // לוגיקת המפל (Cascade) - מנסה מודל אחרי מודל
+    for (const modelName of MODELS) {
         try {
-            console.log(`🔄 Trying Model: ${model}...`);
-            // בניית ה-URL המדויקת לפי המסמך ששלחת
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-            
-            const response = await fetch(url, {
+            console.log(`🔄 מנסה מודל: ${modelName}`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: expertPrompt }] }],
+                    generationConfig: { 
+                        temperature: 0.2, // נמוך כדי להישאר עובדתי
+                        responseMimeType: "application/json" 
+                    }
+                })
             });
 
-            // אם קיבלנו 429 (עומס) או 404 (מודל לא נמצא) או 503 (נפילה זמנית)
-            if (response.status === 429 || response.status === 404 || response.status >= 500) {
-                console.warn(`⚠️ Model ${model} failed (Status ${response.status}). Switching to next model...`);
-                continue; // מדלג למודל הבא ברשימה
+            if (response.ok) {
+                const json = await response.json();
+                const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+                finalData = JSON.parse(rawText);
+                console.log(`✅ הצלחה עם מודל: ${modelName}`);
+                break; // הצלחנו, אפשר לצאת מהלולאה
+            } else {
+                console.warn(`⚠️ מודל ${modelName} נכשל עם סטטוס ${response.status}`);
             }
-
-            if (!response.ok) throw new Error(`Error ${response.status}`);
-
-            // הצלחה! מחזירים את המידע
-            const data = await response.json();
-            console.log(`✅ Success with: ${model}`);
-            return data;
-
-        } catch (error) {
-            console.error(`❌ Error with ${model}: ${error.message}`);
-            // ממשיכים למודל הבא
+        } catch (err) {
+            console.error(`❌ שגיאה במודל ${modelName}:`, err.message);
         }
     }
-    
-    // אם הגענו לפה - כל המודלים נכשלו
-    return null;
-}
 
-app.post('/analyze-ai', async (req, res) => {
-    let { brand, model, submodel, year } = req.body;
-    if (!submodel || submodel === "null") submodel = "";
-    const fullCarName = `${brand} ${model} ${submodel} (${year})`.trim();
-
-    console.log(`🚀 Starting Analysis for: ${fullCarName}`);
-
-    // הכנת גיבוי למקרה חירום
-    const smartBackup = generateSmartBackup(brand, model, year);
-
-    const payload = {
-        contents: [{ parts: [{ text: `Act as an expert Israeli vehicle inspector. Analyze: "${fullCarName}". Return strict JSON only (Hebrew): { "reliability_score": 85, "summary": "Short summary", "common_faults": ["Fault1", "Fault2"], "pros": ["Pro1"], "cons": ["Con1"] }` }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-    };
-
-    // הפעלת המפל
-    const data = await fetchWithCascade(payload);
-
-    if (data) {
-        // יש תשובה מאחד המודלים
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        const clean = rawText.replace(/```json|```/g, '').trim();
-        res.json({ success: true, aiAnalysis: JSON.parse(clean) });
-    } else {
-        // הכל נכשל - מפעילים את הגיבוי החכם
-        console.log("🔥 All models failed. Serving Smart Backup.");
-        res.json({ success: true, aiAnalysis: smartBackup });
+    // אם כל המודלים נכשלו או החזירו תשובה ריקה
+    if (!finalData) {
+        console.error("🔥 כל מודלי ה-AI נכשלו. שולח גיבוי חכם.");
+        finalData = generateSmartBackup(brand, model, engine);
     }
+
+    res.json({ success: true, aiAnalysis: finalData });
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`----------------------------------------`);
+    console.log(`🚗 CarCheck Pro Server is Running!`);
+    console.log(`📍 Port: ${PORT}`);
+    console.log(`🛠️ Mode: Production / Expert AI`);
+    console.log(`----------------------------------------`);
+});
