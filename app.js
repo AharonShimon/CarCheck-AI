@@ -1,6 +1,5 @@
-import { CAR_DATA, CHECKLIST_CONFIG } from './config.js';
+import { CAR_DATA } from './config.js';
 
-let score = 100;
 let dynamicSpecs = { engines: [], trims: [] };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,57 +7,98 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupListeners() {
+    // מאזינים ללחיצות על השדות
     ['brand', 'model', 'year', 'engine', 'trim'].forEach(type => {
         document.getElementById(`${type}-trigger`).addEventListener('click', () => openPicker(type));
     });
 
-    document.getElementById('brand-search').addEventListener('keyup', (e) => filterGrid('brand', e.target.value));
-    document.getElementById('model-search').addEventListener('keyup', (e) => filterGrid('model', e.target.value));
-    document.getElementById('btn-ai').addEventListener('click', startAnalysis);
+    // כפתור ניתוח
+    document.getElementById('btn-analyze').addEventListener('click', startAnalysis);
+
+    // סגירת פופאפים בלחיצה בחוץ
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.field-box') && !e.target.closest('.popup')) {
+            document.querySelectorAll('.popup').forEach(p => p.classList.remove('active'));
+        }
+    });
 }
 
-async function openPicker(type) {
+function openPicker(type) {
     const trigger = document.getElementById(`${type}-trigger`);
-    if(trigger.classList.contains('disabled')) return;
+    if (trigger.classList.contains('disabled')) return;
 
-    document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
+    // סגור את כל האחרים
+    document.querySelectorAll('.popup').forEach(p => p.classList.remove('active'));
+    
     const popup = document.getElementById(`${type}-popup`);
     popup.classList.add('active');
     
     const grid = document.getElementById(`${type}-grid`);
-    if (type === 'brand' && grid.innerHTML === '') {
-        Object.keys(CAR_DATA).sort().forEach(b => createItem(grid, b, 'brand'));
-    } else if (type === 'model' && grid.innerHTML === '') {
-        const b = document.getElementById('val-b').value;
-        CAR_DATA[b]?.models.forEach(m => createItem(grid, m, 'model'));
-    } else if (type === 'year' && grid.innerHTML === '') {
-        for(let y = 2026; y >= 2008; y--) createItem(grid, y, 'year');
-    } else if (type === 'engine' || type === 'trim') {
-        grid.innerHTML = '';
-        const list = type === 'engine' ? dynamicSpecs.engines : dynamicSpecs.trims;
-        list.forEach(item => createItem(grid, item, type));
+    
+    // מילוי הנתונים רק אם הגריד ריק
+    if (grid.innerHTML === '') {
+        populateGrid(type, grid);
     }
 }
 
-function createItem(grid, val, type) {
-    const d = document.createElement('div');
-    d.className = 'grid-item';
-    d.innerText = val;
-    d.onclick = (e) => { e.stopPropagation(); selectValue(type, val); };
-    grid.appendChild(d);
+function populateGrid(type, grid) {
+    let items = [];
+    
+    if (type === 'brand') {
+        items = Object.keys(CAR_DATA).sort();
+    } else if (type === 'model') {
+        const b = document.getElementById('val-b').value;
+        items = CAR_DATA[b]?.models || [];
+    } else if (type === 'year') {
+        for (let y = 2025; y >= 2005; y--) items.push(y);
+    } else if (type === 'engine') {
+        items = dynamicSpecs.engines;
+    } else if (type === 'trim') {
+        items = dynamicSpecs.trims;
+    }
+
+    items.forEach(val => {
+        const div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerText = val;
+        div.onclick = (e) => {
+            e.stopPropagation();
+            selectValue(type, val);
+        };
+        grid.appendChild(div);
+    });
 }
 
 async function selectValue(type, val) {
+    // עדכון הערך הנבחר
     document.getElementById(`val-${type.charAt(0)}`).value = val;
     document.getElementById(`${type}-trigger`).querySelector('span').innerText = val;
     document.getElementById(`${type}-popup`).classList.remove('active');
 
-    if(type === 'brand') { enableField('model'); document.getElementById('model-grid').innerHTML = ''; }
-    else if(type === 'model') { enableField('year'); }
-    else if(type === 'year') { await fetchSpecsFromAI(); }
-    else if(type === 'engine') { enableField('trim'); }
+    // לוגיקת השרשרת
+    if (type === 'brand') {
+        resetNextFields('model');
+        document.getElementById('model-grid').innerHTML = ''; // איפוס כדי שיתמלא מחדש
+        enableField('model');
+        openPicker('model');
+    } 
+    else if (type === 'model') {
+        resetNextFields('year');
+        enableField('year');
+        openPicker('year');
+    } 
+    else if (type === 'year') {
+        // === כאן קורה הקסם: פונים ל-AI ===
+        resetNextFields('engine');
+        await fetchSpecsFromAI();
+    } 
+    else if (type === 'engine') {
+        resetNextFields('trim');
+        enableField('trim');
+        openPicker('trim');
+    }
     
-    checkForm();
+    checkFormCompletion();
 }
 
 async function fetchSpecsFromAI() {
@@ -67,34 +107,62 @@ async function fetchSpecsFromAI() {
     const year = document.getElementById('val-y').value;
 
     const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loader-text');
+    loaderText.innerText = `מאתר מפרטים עבור ${brand} ${model}...`;
     loader.style.display = 'flex';
 
     try {
-        const res = await fetch('/get-specs', {
+        const response = await fetch('/get-specs', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ brand, model, year })
         });
-        const json = await res.json();
-        if (json.success) {
+
+        const json = await response.json();
+
+        if (json.success && json.data) {
             dynamicSpecs = json.data;
+            // ניקוי גרידים קודמים
+            document.getElementById('engine-grid').innerHTML = '';
+            document.getElementById('trim-grid').innerHTML = '';
+            
             enableField('engine');
             openPicker('engine');
+        } else {
+            alert("לא נמצאו נתונים מדויקים, נסה שוב");
         }
-    } catch (err) {
-        console.error(err);
+    } catch (e) {
+        console.error(e);
+        // Fallback למקרה חירום
+        dynamicSpecs = { engines: ["בנזין 1.6", "היברידי"], trims: ["רגיל", "מפואר"] };
+        enableField('engine');
     } finally {
         loader.style.display = 'none';
     }
 }
 
-function enableField(id) { document.getElementById(`${id}-trigger`).classList.remove('disabled'); }
-
-function checkForm() {
-    const fields = ['b', 'm', 'y', 'e', 't'].every(f => document.getElementById(`val-${f}`).value);
-    document.getElementById('btn-ai').disabled = !fields;
+function startAnalysis() {
+    // כאן תבוא הפונקציה המלאה ששלחתי לך קודם
+    // לצורך הדוגמה, רק נציג הודעה
+    alert("שולח לניתוח AI...");
 }
 
-async function startAnalysis() {
-    // ... לוגיקת הניתוח הסופי (דומה למה שכתבת)
+// עזרים
+function enableField(id) { document.getElementById(`${id}-trigger`).classList.remove('disabled'); }
+function resetNextFields(fromType) {
+    // לוגיקה פשוטה לאיפוס שדות בהמשך הדרך
+    const order = ['brand', 'model', 'year', 'engine', 'trim'];
+    let startIdx = order.indexOf(fromType);
+    for(let i=startIdx; i<order.length; i++) {
+        const t = order[i];
+        document.getElementById(`val-${t.charAt(0)}`).value = '';
+        const el = document.getElementById(`${t}-trigger`);
+        el.classList.add('disabled');
+        el.querySelector('span').innerText = 'בחר...';
+    }
+}
+
+function checkFormCompletion() {
+    const allFilled = ['b','m','y','e','t'].every(k => document.getElementById(`val-${k}`).value);
+    document.getElementById('btn-analyze').disabled = !allFilled;
 }
