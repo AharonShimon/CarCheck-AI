@@ -4,55 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CarCheck AI Pro</title>
-    <link rel="stylesheet" href="style.css">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1>CarCheck <span>AI Pro</span></h1>
-            <p>בוחן רכב אישי בכיס שלך</p>
-        </header>
 
-        <section id="step-1" class="step-card active">
-            <h2>פרטי הרכב</h2>
-            <div class="input-group">
-                <label>יצרן</label>
-                <select id="brand-select"><option value="">בחר יצרן...</option></select>
-            </div>
-            <div class="input-group">
-                <label>דגם</label>
-                <select id="model-select" disabled><option value="">בחר דגם...</option></select>
-            </div>
-            <div class="input-group">
-                <label>שנה</label>
-                <select id="year-select"><option value="">בחר שנה...</option></select>
-            </div>
-            <div class="input-group">
-                <label>סוג מנוע</label>
-                <select id="engine-select" disabled><option value="">בחר מנוע...</option></select>
-            </div>
-            <div class="input-group">
-                <label>רמת גימור</label>
-                <select id="trim-select" disabled><option value="">בחר גימור...</option></select>
-            </div>
-            <button id="to-checklist-btn" class="primary-btn">המשך לבדיקה פיזית</button>
-        </section>
+<div id="loader"><div class="spinner"></div><div style="margin-top:20px; color:var(--accent);">🤖 מנתח ב-AI...</div></div>
 
-        <section id="step-2" class="step-card">
-            <h2>בדיקת ליקויים</h2>
-            <p style="font-size: 0.8rem; color: var(--text-dim);">סמן רק מה ש**לא תקין**</p>
-            <div id="checklist-content"></div>
-            <button id="analyze-ai-btn" class="primary-btn">נתח תוצאות ב-AI</button>
-        </section>
-
-        <section id="step-3" class="step-card">
-            <div id="ai-results"></div>
-            <button onclick="location.reload()" class="primary-btn" style="background: var(--card-bg); color: white; margin-top: 20px;">בדיקה חדשה</button>
-        </section>
+<div id="screen-input" class="container">
+    <header><h1>🚗 CarCheck <span>PRO</span></h1></header>
+    
+    <div class="plate-box"><div class="plate-inner"><input id="plate" class="plate-input" type="tel" placeholder="לוחית רישוי" maxlength="8"></div></div>
+    
+    <div class="field-group">
+        <label>1. יצרן</label>
+        <div id="brand-trigger" class="selector-trigger"><span>בחר יצרן...</span> <span>▼</span></div>
+        <div id="brand-popup" class="popup-grid">
+            <input type="text" class="search-input" placeholder="חפש יצרן..." id="brand-search">
+            <div id="brand-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-b">
     </div>
 
-    <script type="module" src="app.js"></script>
+    <div class="field-group">
+        <label>2. דגם</label>
+        <div id="model-trigger" class="selector-trigger disabled"><span>בחר דגם...</span> <span>▼</span></div>
+        <div id="model-popup" class="popup-grid">
+            <input type="text" class="search-input" placeholder="חפש דגם..." id="model-search">
+            <div id="model-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-m">
+    </div>
+
+    <div class="field-group">
+        <label>3. שנת ייצור</label>
+        <div id="year-trigger" class="selector-trigger disabled"><span>בחר שנה...</span> <span>▼</span></div>
+        <div id="year-popup" class="popup-grid">
+            <div id="year-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-y">
+    </div>
+
+    <div class="field-group">
+        <label>4. סוג מנוע</label>
+        <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
+        <div id="engine-popup" class="popup-grid">
+            <div id="engine-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-e">
+    </div>
+
+    <div class="field-group">
+        <label>5. רמת גימור (גרסה)</label>
+        <input type="text" id="trim-input" class="text-input" placeholder="לדוגמה: Luxury, GT-Line...">
+    </div>
+
+    <button id="btn-ai" class="btn-main" disabled>🚀 נתח נתונים ב-AI</button>
+    <button id="btn-skip" class="btn-main btn-outline">📋 דלג לבדיקה ידנית</button>
+    
+    <div id="ai-panel" style="margin-top: 30px; display: none;"></div>
+</div>
+
+<div id="screen-check" class="container">
+    <header><h1>📋 בדיקת <span>שטח</span></h1></header>
+    <div id="checklist-content"></div>
+    <div style="position:fixed; bottom:0; left:0; right:0; padding:20px; background:var(--bg-deep); border-top:1px solid var(--card-border); z-index:100;">
+        <button id="btn-finish" class="btn-main" style="background:var(--success)">📊 סיום וחשב תוצאה</button>
+    </div>
+</div>
+
+<div id="screen-result" class="container">
+    <header><h1>🏆 תוצאות <span>בדיקה</span></h1></header>
+    <div id="final-gauge" class="final-gauge">0</div>
+    <h2 id="result-status"></h2>
+    <div id="defects-container" class="defects-list" style="display:none;">
+        <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ליקויים שנמצאו:</h3>
+        <ul id="defects-ul"></ul>
+    </div>
+    <button class="btn-main" onclick="location.reload()">🔄 בדיקה חדשה</button>
+</div>
+
+<script type="module" src="./app.js"></script>
 </body>
 </html>
