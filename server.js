@@ -4,24 +4,23 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// הגדרות נחוצות כדי ש-Node.js יבין איפה אנחנו נמצאים (בשיטת import)
+// הגדרת נתיבים (נדרש בגלל שימוש ב-import)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// הגדרות שרת
 app.use(cors());
 app.use(express.json());
-
-// הגשת קבצים סטטיים (HTML, CSS, JS) מהתיקייה הנוכחית
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname))); // מגיש את קבצים הסטטיים (HTML/CSS/JS)
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// פונקציה לשליחה לגוגל ג'מיני
+// פונקציה לתקשורת עם גוגל ג'מיני
 async function askGemini(prompt) {
     if (!API_KEY) {
-        console.error("Error: Missing GEMINI_API_KEY in .env file");
-        throw new Error("API Key missing");
+        throw new Error("Missing GEMINI_API_KEY in .env file");
     }
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
@@ -37,72 +36,80 @@ async function askGemini(prompt) {
     return data.candidates[0].content.parts[0].text;
 }
 
-// פונקציה לניקוי התשובה של ה-AI (משאירה רק JSON)
+// פונקציית עזר לניקוי ה-JSON שחוזר מה-AI
 function cleanJSON(text) {
     try {
+        // מנסה למצוא את ה-JSON בתוך הטקסט (למקרה שה-AI הוסיף מילים מסביב)
         const match = text.match(/\{[\s\S]*\}/);
         return match ? JSON.parse(match[0]) : null;
-    } catch (e) { return null; }
+    } catch (e) {
+        return null;
+    }
 }
 
-// === נתיב הניתוח הראשי ===
+// === הנתיב הראשי לניתוח רכב ===
 app.post('/analyze-ai', async (req, res) => {
     try {
-        // קבלת הנתונים מהלקוח, כולל ההערות החדשות
+        // קבלת הנתונים מהלקוח
+        // userNotes עשוי להיות ריק כי הסרנו את השדה, וזה בסדר
         const { brand, model, year, engine, trim, userNotes } = req.body;
         
-        console.log(`🤖 Analyzing: ${brand} ${model} (${year}) | Notes: ${userNotes || "None"}`);
+        console.log(`🤖 AI Request: ${brand} ${model} (${year})`);
 
-        // ההנחיה ל-AI (הפרומפט)
+        // בניית הפרומפט למוסכניק הווירטואלי
         const prompt = `
         Act as a senior Israeli car mechanic and expert buyer consultant.
         
-        Car Details:
-        - Model: ${brand} ${model}
+        Vehicle Details:
+        - Car: ${brand} ${model}
         - Year: ${year}
         - Engine: ${engine}
         - Trim: ${trim}
-        - User Observations/Notes: "${userNotes || "None"}"
+        - User Notes: "${userNotes || "No specific issues reported"}"
 
-        Task: Provide a short, professional analysis in Hebrew.
-        If the user notes indicate a serious problem (e.g., 'white smoke', 'slipping gears'), reflect that in the score and faults.
-        
-        Output MUST be valid JSON only (no markdown):
+        Task:
+        Analyze the reliability of this specific car model in the Israeli market context.
+        Since there are no specific user notes, base your score on the general reputation, known chronic issues (machalot), and maintenance costs for this specific year and engine.
+
+        Output MUST be valid JSON only (Hebrew language):
         {
-            "reliability_score": 85,
-            "summary": "Short paragraph in Hebrew. Direct and professional.",
+            "reliability_score": (Number 0-100, be realistic based on model year),
+            "summary": "Short paragraph in Hebrew. Direct and professional bottom line.",
             "pros": ["Pro 1", "Pro 2"],
             "common_faults": ["Fault 1", "Fault 2"]
         }
         `;
 
+        // שליחה ל-AI
         const rawText = await askGemini(prompt);
         const analysis = cleanJSON(rawText);
 
         if (!analysis) throw new Error("Failed to parse AI response");
 
+        // החזרת תשובה ללקוח
         res.json({ success: true, aiAnalysis: analysis });
 
     } catch (e) {
         console.error("AI Error:", e.message);
-        // תשובת גיבוי למקרה של תקלה בשרת
+        
+        // תשובת ברירת מחדל למקרה של שגיאה (כדי שהאפליקציה לא תיתקע)
         res.json({ 
             success: true, 
             aiAnalysis: {
                 reliability_score: 80,
-                summary: "לא הצלחנו ליצור קשר עם השרת כרגע, אך דגם זה נחשב בדרך כלל לאמין. מומלץ לבצע את בדיקת השטח בקפידה.",
-                pros: ["רכב פופולרי", "חלפים זמינים"],
-                common_faults: ["בלאי טבעי", "מערכת חשמל"]
+                summary: "לא ניתן להתחבר לשרת כרגע. באופן כללי, הקפד לבדוק היסטוריית טיפולים.",
+                pros: ["רכב פופולרי"],
+                common_faults: ["בלאי טבעי"]
             } 
         });
     }
 });
 
-// נתיב ברירת מחדל שמגיש את האתר
+// נתיב ברירת מחדל (למקרה שגולשים ישירות לכתובת)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // הפעלת השרת
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server started on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
