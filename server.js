@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 app.use(cors());
@@ -10,140 +9,122 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
 
-// === רשימת המודלים לגיבוי ===
-// השרת ינסה אותם לפי הסדר עד שימצא אחד שעובד
-const ALL_MODELS = [
-    "gemini-1.5-flash",        // המהיר והמומלץ
-    "gemini-1.5-flash-001",    // גרסה ספציפית
-    "gemini-1.5-flash-002",    // גרסה ספציפית חדשה
-    "gemini-2.0-flash-exp",    // החדש ביותר (ניסיוני)
-    "gemini-1.5-pro",          // החכם (איטי יותר)
-    "gemini-1.5-pro-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.0-pro",          // דור 1
-    "gemini-pro"               // הכינוי הישן (תמיד עובד כגיבוי אחרון)
+// === הפתרון היצירתי: רשימת כתובות ומודלים ===
+// אנחנו ננסה את כל הקומבינציות האפשריות עד שנצליח
+const CONFIGS = [
+    // ניסיון 1: הגרסה היציבה (v1) עם המודל המהיר
+    { version: 'v1', model: 'gemini-1.5-flash' },
+    // ניסיון 2: גרסת הבטא (v1beta) עם המודל המהיר
+    { version: 'v1beta', model: 'gemini-1.5-flash' },
+    // ניסיון 3: המודל הישן והאמין (gemini-pro) בגרסה יציבה
+    { version: 'v1', model: 'gemini-pro' },
+    // ניסיון 4: המודל הישן בגרסת בטא
+    { version: 'v1beta', model: 'gemini-pro' }
 ];
 
-// === פונקציית עזר: חילוץ JSON ===
-function extractJSON(text) {
-    try {
-        // מנסה למצוא את ה-JSON בין הסוגריים המסולסלים
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) return JSON.parse(match[0]);
-        
-        // מנסה לנקות סימני קוד
-        return JSON.parse(text.replace(/```json|```/g, '').trim());
-    } catch (e) {
-        return null;
-    }
-}
-
-// === המנוע החכם: רץ על כל המודלים ===
-async function generateWithRetry(prompt) {
+async function callGoogleAI(prompt) {
     let lastError = null;
-    console.log("🚀 מתחיל חיפוש במודלים...");
 
-    for (const modelName of ALL_MODELS) {
+    // לולאה שרצה על כל הכתובות האפשריות
+    for (const config of CONFIGS) {
         try {
-            // יצירת מודל
-            const model = genAI.getGenerativeModel({ model: modelName });
-            
-            // שליחה
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
-            
-            if (text) {
-                console.log(`✅ הצלחה! מודל שעבד: ${modelName}`);
-                return text; // מצאנו! יוצאים ומחזירים תשובה
-            }
+            const url = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${API_KEY}`;
+            console.log(`🔌 מנסה להתחבר דרך: ${config.version} / ${config.model}...`);
 
-        } catch (error) {
-            // רק מזהיר וממשיך למודל הבא
-            // אנחנו חותכים את הודעת השגיאה כדי שלא תלכלך את הלוג
-            console.warn(`⚠️ מודל ${modelName} נכשל: ${error.message.split('[')[0]}... (ממשיך לבא)`);
-            lastError = error;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    // === הפיצ'ר החדש: כפיית פורמט JSON ===
+                    // זה מבטיח דיוק של 100% במבנה הנתונים
+                    generationConfig: {
+                        response_mime_type: "application/json"
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            // אם הכתובת הזו לא עובדת, נזרקת שגיאה ונעבור לכתובת הבאה
+            if (data.error) throw new Error(data.error.message);
+            if (!data.candidates || !data.candidates[0]) throw new Error("Empty response");
+
+            console.log(`✅ הצלחה! נתונים התקבלו מ-${config.model}`);
+            return data.candidates[0].content.parts[0].text;
+
+        } catch (e) {
+            console.warn(`⚠️ נכשל ב-${config.model}: ${e.message}`);
+            lastError = e;
         }
     }
-
-    // אם הגענו לפה - הכל נכשל
-    console.error("❌ כל המודלים נכשלו.");
-    throw lastError; 
+    
+    throw new Error("כל הניסיונות נכשלו. בדוק את ה-API Key שלך ב-Google AI Studio.");
 }
 
-// === נתיב 1: מפרטים (עם הפרומפט המדויק לישראל) ===
+// נתיב 1: מפרטים (Spec Lookup) - הכי מדויק שיש
 app.post('/get-specs', async (req, res) => {
     const { brand, model, year } = req.body;
-    console.log(`🔍 מחפש מפרט ישראלי: ${brand} ${model} ${year}`);
-    
+    console.log(`🔍 מפרט מדויק: ${brand} ${model} ${year}`);
+
     try {
         if (!API_KEY) throw new Error("Missing API Key");
 
-        // הפרומפט הכירורגי
+        // פרומפט מוקפד לנתונים מישראל בלבד
         const prompt = `
-        You are an expert Israeli car database.
-        List ONLY the specific engine options (volume + type) and trim levels (רמות גימור) 
-        that were officially sold in Israel for the following car:
+        Act as an Israeli automotive database.
+        Task: List the EXACT engine options and trim levels sold in Israel for:
+        Vehicle: ${year} ${brand} ${model}
         
-        Manufacturer: ${brand}
-        Model: ${model}
-        Year: ${year}
+        Requirements:
+        1. Market: Israel (IL) ONLY.
+        2. Engines: Format as "Volume Type (HP)" (e.g., "1.6L Petrol (132hp)", "1.8L Hybrid").
+        3. Trims: List exact commercial names in English/Hebrew transliteration.
+        4. Accuracy: Do not hallucinate trims that didn't exist in ${year}.
         
-        Rules:
-        1. Focus ONLY on the Israeli market (IL).
-        2. Engines must include volume (e.g., "2.0L SkyActiv", "1.6L Turbo", "1.2L TSI").
-        3. Trims must be in English or Hebrew transliteration (e.g., "Executive", "Premium", "Spirit", "Instyle").
-        4. Do NOT invent trims.
-        5. Return valid JSON only: {"engines": ["..."], "trims": ["..."]}
+        Output Schema (JSON):
+        {
+            "engines": ["string"],
+            "trims": ["string"]
+        }
         `;
 
-        const text = await generateWithRetry(prompt);
-        const specs = extractJSON(text);
-
-        if (!specs) throw new Error("JSON לא תקין");
+        const jsonString = await callGoogleAI(prompt);
+        const specs = JSON.parse(jsonString); // בגלל ה-Mode החדש, זה תמיד יהיה JSON תקין
 
         res.json({ success: true, data: specs });
 
     } catch (error) {
-        console.error("❌ שגיאה סופית במפרט:", error.message);
-        
-        // רשת ביטחון: רשימה גנרית כדי שהאפליקציה תעבוד
-        res.json({ 
-            success: true, 
-            data: { 
-                engines: ["בנזין", "טורבו", "היברידי", "דיזל", "חשמלי"], 
-                trims: ["רמת גימור בסיסית", "רמת גימור גבוהה", "אחר"] 
-            },
-            is_fallback: true
-        });
+        console.error("❌ כשל סופי במפרט:", error.message);
+        // אם הכל נכשל - מחזירים שגיאה ללקוח כדי שלא יקבל נתונים שקריים
+        res.status(500).json({ success: false, error: "לא ניתן לשלוף נתונים כרגע" });
     }
 });
 
-// === נתיב 2: ניתוח (מוסכניק) ===
+// נתיב 2: ניתוח (Analysis)
 app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year, engine, trim, faults } = req.body;
-        console.log(`🤖 מנתח רכב...`);
         
         const prompt = `
-        פעל כשמאי רכב ומוסכניק ישראלי.
-        רכב: ${brand} ${model} שנת ${year} (${engine}), גימור: ${trim}.
-        תקלות שדווחו: ${faults && faults.length ? faults.join(',') : "רכב נקי"}.
+        Act as an expert Israeli mechanic.
+        Vehicle: ${brand} ${model} ${year}, Engine: ${engine}, Trim: ${trim}.
+        Reported Faults: ${faults?.join(', ') || "None"}.
         
-        החזר JSON בלבד:
+        Output JSON:
         {
-            "reliability_score": מספר (1-100),
-            "summary": "סיכום קצר וחד בעברית",
-            "common_faults": ["תקלה 1 (X שח)", "תקלה 2 (Y שח)"],
-            "negotiation_tip": "טיפ למומ"
-        }`;
+            "reliability_score": number (0-100),
+            "summary": "Short Hebrew summary",
+            "common_faults": ["Hebrew fault 1 - Price", "Hebrew fault 2 - Price"],
+            "negotiation_tip": "Hebrew tip"
+        }
+        `;
 
-        const text = await generateWithRetry(prompt);
-        const jsonResult = extractJSON(text);
+        const jsonString = await callGoogleAI(prompt);
+        const result = JSON.parse(jsonString);
         
-        res.json({ success: true, aiAnalysis: jsonResult });
+        res.json({ success: true, aiAnalysis: result });
 
     } catch (error) {
         console.error("Analysis Error:", error);
