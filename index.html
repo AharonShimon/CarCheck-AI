@@ -2,64 +2,99 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CarCheck AI Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="loader" class="loader-overlay" style="display:none;">
-        <div class="spinner"></div>
-        <p id="loader-text" style="color:white; margin-top:20px; font-weight:bold;">טוען נתונים...</p>
+<div id="loader">
+    <div class="spinner"></div>
+    <div id="loader-text" style="margin-top:20px; color:var(--accent); font-weight:bold;">🤖 מנתח ב-AI...</div>
+</div>
+
+<div id="screen-input" class="container">
+    <header><h1>🚗 CarCheck <span>PRO</span></h1></header>
+    
+    <div class="plate-box">
+        <div class="plate-inner">
+            <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8">
+        </div>
+    </div>
+    
+    <div class="field-group">
+        <label>1. יצרן</label>
+        <div id="brand-trigger" class="selector-trigger"><span>בחר יצרן...</span> <span>▼</span></div>
+        <div id="brand-popup" class="popup-grid">
+            <input type="text" id="brand-search" class="search-input" placeholder="חפש יצרן...">
+            <div id="brand-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-b">
     </div>
 
-    <div class="container">
-        <header>
-            <h1>CarCheck <span style="color:var(--accent)">AI</span></h1>
-            <p>בדיקת רכב חכמה לפני קנייה</p>
-        </header>
-
-        <main id="screen-input">
-            <input type="hidden" id="val-b"><input type="hidden" id="val-m">
-            <input type="hidden" id="val-y"><input type="hidden" id="val-e">
-            <input type="hidden" id="val-t">
-
-            <div class="field-box">
-                <label>יצרן</label>
-                <div id="brand-trigger" class="selector"><span>בחר יצרן...</span></div>
-                <div id="brand-popup" class="popup"><div id="brand-grid" class="grid"></div></div>
-            </div>
-
-            <div class="field-box">
-                <label>דגם</label>
-                <div id="model-trigger" class="selector disabled"><span>בחר דגם...</span></div>
-                <div id="model-popup" class="popup"><div id="model-grid" class="grid"></div></div>
-            </div>
-
-            <div class="field-box">
-                <label>שנה</label>
-                <div id="year-trigger" class="selector disabled"><span>בחר שנה...</span></div>
-                <div id="year-popup" class="popup"><div id="year-grid" class="grid"></div></div>
-            </div>
-
-            <div class="field-box highlight">
-                <label>מנוע (AI ✨)</label>
-                <div id="engine-trigger" class="selector disabled"><span>ממתין לנתונים...</span></div>
-                <div id="engine-popup" class="popup"><div id="engine-grid" class="grid"></div></div>
-            </div>
-
-            <div class="field-box highlight">
-                <label>רמת גימור</label>
-                <div id="trim-trigger" class="selector disabled"><span>ממתין לנתונים...</span></div>
-                <div id="trim-popup" class="popup"><div id="trim-grid" class="grid"></div></div>
-            </div>
-
-            <button id="btn-analyze" class="btn-primary" disabled>קבל חוות דעת מוסכניק 🤖</button>
-            
-            <div id="ai-result"></div>
-        </main>
+    <div class="field-group">
+        <label>2. דגם</label>
+        <div id="model-trigger" class="selector-trigger disabled"><span>בחר דגם...</span> <span>▼</span></div>
+        <div id="model-popup" class="popup-grid">
+            <input type="text" id="model-search" class="search-input" placeholder="חפש דגם...">
+            <div id="model-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-m">
     </div>
 
-    <script type="module" src="app.js"></script>
+    <div class="field-group">
+        <label>3. שנת ייצור</label>
+        <div id="year-trigger" class="selector-trigger disabled"><span>בחר שנה...</span> <span>▼</span></div>
+        <div id="year-popup" class="popup-grid">
+            <div id="year-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-y">
+    </div>
+
+    <div class="field-group">
+        <label>4. סוג מנוע ונפח (AI ✨)</label>
+        <div id="engine-trigger" class="selector-trigger disabled"><span>🔌 בחר מנוע...</span> <span>▼</span></div>
+        <div id="engine-popup" class="popup-grid">
+            <div id="engine-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-e">
+    </div>
+
+    <div class="field-group">
+        <label>5. רמת גימור (AI ✨)</label>
+        <div id="trim-trigger" class="selector-trigger disabled"><span>✨ בחר גימור...</span> <span>▼</span></div>
+        <div id="trim-popup" class="popup-grid">
+            <div id="trim-grid" class="grid-layout"></div>
+        </div>
+        <input type="hidden" id="val-t">
+    </div>
+
+    <button id="btn-ai" class="btn-main" disabled>🚀 נתח נתונים ב-AI</button>
+    <button id="btn-skip" class="btn-main btn-outline">📋 דלג לבדיקה ידנית</button>
+    
+    <div id="ai-panel" style="margin-top: 30px; display: none;"></div>
+</div>
+
+<div id="screen-check" class="container">
+    <header><h1>📋 בדיקת <span>שטח</span></h1></header>
+    <div id="checklist-content"></div>
+    <div style="position:fixed; bottom:0; left:0; right:0; padding:20px; background:var(--bg-deep); border-top:1px solid var(--card-border); z-index:100;">
+        <button id="btn-finish" class="btn-main" style="background:var(--success)">📊 סיום וחשב תוצאה</button>
+    </div>
+</div>
+
+<div id="screen-result" class="container">
+    <header><h1>🏆 תוצאות <span>בדיקה</span></h1></header>
+    <div id="final-gauge" class="final-gauge">0</div>
+    <h2 id="result-status"></h2>
+    <div id="defects-container" class="defects-list" style="display:none;">
+        <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ליקויים שנמצאו:</h3>
+        <ul id="defects-ul"></ul>
+    </div>
+    <button id="btn-restart" class="btn-main">🔄 בדיקה חדשה</button>
+</div>
+
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
