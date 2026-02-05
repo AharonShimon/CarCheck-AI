@@ -99,10 +99,10 @@
     </div>
 
     <div class="field-group">
-        <label>4. תת-דגם / רמת גימור</label>
+        <label>4. תת-דגם / רמת גימור (אופציונלי)</label>
         <div id="submodel-trigger" class="selector-trigger disabled" onclick="window.handlePicker('submodel')"><span>⚙️ בחר או הקלד...</span> <span class="arrow">▼</span></div>
         <div id="submodel-popup" class="popup-grid">
-            <input type="text" class="search-input" placeholder="הקלד תת-דגם או בחר מהרשימה..." onkeyup="window.filterGrid('submodel', this.value)">
+            <input type="text" class="search-input" placeholder="לדוגמה: Premium, GLX, בנזין..." onkeyup="window.filterGrid('submodel', this.value)">
             <div id="submodel-grid" class="grid-layout"></div>
         </div>
         <input type="hidden" id="val-s">
@@ -160,7 +160,7 @@ const carData = {
     "MG": ["MG4", "ZS EV", "EHS", "Marvel R"]
 };
 
-// === 2. המאגר הגדול של תתי-דגמים (הרחבתי את הרשימה) ===
+// === 2. מאגר תתי-דגמים ענק (מותאם לישראל) ===
 const subModelData = {
     // טויוטה
     "קורולה": ["Sun", "GLI", "Limited", "Sense", "50th Edition", "Hybrid Sun", "Hybrid GLI", "TS (סטיישן)", "Flow", "Excite"],
@@ -168,25 +168,30 @@ const subModelData = {
     "RAV4": ["Experience", "E-Motion", "E-Volve", "Hybrid GLI", "Plug-in Hybrid", "Extreme"],
     "C-HR": ["C-Ity", "C-Hic", "Concept", "GR Sport", "Vision"],
     "לנד קרוזר": ["Luxury", "Select", "Sahara", "Limited", "TS", "Standard", "Short"],
+    
     // יונדאי
     "i10": ["Inspire", "Prime", "Supreme", "Intense", "Premium"],
     "i20": ["Prime", "Prestige", "Supreme", "N Line", "Premium", "Insight"],
     "i30": ["Inspire", "Premium", "N Performance", "CW (סטיישן)"],
     "טוסון": ["Prime", "Panoramic", "Elite", "Prestige", "Luxury", "Turbo", "Premium"],
     "איוניק 5": ["Prestige", "Luxury", "Elite", "Limited"],
+    
     // קיה
     "פיקנטו": ["LX", "EX", "GT Line", "X Line", "Urban", "Top"],
     "ספורטאז'": ["Urban", "Urban Top", "LX", "EX", "Premium", "GT Line", "Turbo", "Diesel"],
     "נירו": ["LX", "EX", "Plug-in", "EV", "Plus", "Urban"],
+    
     // מאזדה
     "2": ["Active", "Dynamic", "Pure White", "Sports"],
     "3": ["Comfort", "Spirit", "Active", "Premium", "Spirit Black"],
     "CX-5": ["Executive", "Luxury", "Premium", "Signature", "Black Edition"],
+    
     // סקודה/סיאט/פולקסווגן
     "אוקטביה": ["Ambition", "Style", "Exclusive", "RS", "Dynamic"],
     "גולף": ["Trendline", "Comfortline", "Life", "Style", "GTI", "R-Line"],
     "איביזה": ["Reference", "Style", "FR", "Evo"],
     "לאון": ["Style", "FR", "Cupra", "FR 1.5", "FR 2.0"],
+    
     // אחרים
     "סוויפט": ["GLX", "GLS", "Hybrid"],
     "מאליבו": ["LT", "LTZ"],
@@ -196,7 +201,7 @@ const subModelData = {
     "Atto 3": ["Comfort", "Design"],
     "Geometry C": ["350 Pro", "460 Pro", "460 Pure"],
     
-    // ברירת מחדל
+    // רשימה גנרית למקרה של רכב לא מוכר
     "default": ["בנזין אוטומט", "בנזין ידני", "טורבו", "היברידי", "דיזל", "חשמלי", "Premium", "Executive", "Exclusive", "GLX", "LS", "LT", "Sport", "Luxury"]
 };
 
@@ -230,7 +235,7 @@ window.handlePicker = function(type) {
 function renderSubModels() {
     const model = document.getElementById('val-m').value;
     const grid = document.getElementById('submodel-grid');
-    // שליפה מהמאגר המקומי או ברירת מחדל
+    // שליפה מהמאגר המקומי (לפי הדגם) או רשימת ברירת מחדל
     const options = subModelData[model] || subModelData["default"];
     renderGrid('submodel', options, grid);
 }
@@ -239,7 +244,7 @@ function renderGrid(type, items, targetElement = null) {
     const g = targetElement || document.getElementById(type + '-grid');
     g.innerHTML = '';
     
-    // אופציית "הוספה ידנית" תמיד תהיה למעלה אם יש טקסט בחיפוש
+    // תיבת הוספה ידנית
     const manualInput = document.querySelector(`#${type}-popup input`);
     if (manualInput && manualInput.value) {
         const d = document.createElement('div'); d.className = 'grid-item manual-entry'; d.style.gridColumn = "1/-1";
@@ -291,7 +296,6 @@ window.clearAll = function() {
     document.getElementById('ai-panel').style.display = 'none';
 };
 
-// פונקציית סינון חכמה שגם מאפשרת הוספה
 window.filterGrid = function(type, query) {
     const grid = document.getElementById(type + '-grid');
     
@@ -317,14 +321,13 @@ window.shiftY = function(n) { yBase += (n * 9); renderYears(); };
 window.startDeepAI = async function() {
     const b = document.getElementById('val-b').value;
     const m = document.getElementById('val-m').value;
-    const s = document.getElementById('val-s').value;
+    const s = document.getElementById('val-s').value; // יכול להיות ריק
     const y = document.getElementById('val-y').value;
     
-    if(!b || !m || !y) return alert("חסרים פרטים לניתוח");
+    if(!b || !m || !y) return alert("חובה לבחור יצרן, דגם ושנה!");
     document.getElementById('loader').style.display = 'flex';
     
     try {
-        // שולח את כל השדות לשרת, כולל תת-הדגם שהוקלד או נבחר
         const res = await fetch('/analyze-ai', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
