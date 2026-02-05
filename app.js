@@ -1,175 +1,303 @@
 import { CAR_DATA, CHECKLIST_CONFIG } from './config.js';
 
-// אלמנטים
-const screens = document.querySelectorAll('.step-card');
-const brandSelect = document.getElementById('brand-select');
-const modelSelect = document.getElementById('model-select');
-const engineSelect = document.getElementById('engine-select');
-const trimSelect = document.getElementById('trim-select');
-const yearSelect = document.getElementById('year-select');
-const checklistContent = document.getElementById('checklist-content');
+// משתנים גלובליים לניהול מצב
+let score = 100;
+let defects = [];
 
-// כפתורים
-const btnToChecklist = document.getElementById('to-checklist-btn');
-const btnAnalyze = document.getElementById('analyze-ai-btn');
+// אתחול האפליקציה
+document.addEventListener('DOMContentLoaded', () => {
+    setupListeners();
+});
 
-function init() {
-    // מילוי יצרנים
-    Object.keys(CAR_DATA).forEach(brand => brandSelect.add(new Option(brand, brand)));
+function setupListeners() {
+    // פתיחת פופ-אפים
+    document.getElementById('brand-trigger').addEventListener('click', () => openPicker('brand'));
+    document.getElementById('model-trigger').addEventListener('click', () => openPicker('model'));
+    document.getElementById('year-trigger').addEventListener('click', () => openPicker('year'));
+    document.getElementById('engine-trigger').addEventListener('click', () => openPicker('engine'));
 
-    // מילוי שנים
-    const currentYear = new Date().getFullYear();
-    for(let y = currentYear; y >= 2008; y--) yearSelect.add(new Option(y, y));
+    // חיפוש ברשימות
+    document.getElementById('brand-search').addEventListener('keyup', (e) => filterGrid('brand', e.target.value));
+    document.getElementById('model-search').addEventListener('keyup', (e) => filterGrid('model', e.target.value));
 
-    // מאזינים
-    brandSelect.addEventListener('change', handleBrandChange);
-    modelSelect.addEventListener('change', handleModelChange);
-    
-    // כפתור מעבר שלב
-    btnToChecklist.addEventListener('click', () => {
-        if(!brandSelect.value || !modelSelect.value) {
-            alert('נא לבחור יצרן ודגם כדי להתקדם');
-            return;
+    // בדיקת תקינות טופס (להפעלת כפתור AI)
+    document.getElementById('trim-input').addEventListener('input', checkForm);
+
+    // כפתורים ראשיים
+    document.getElementById('btn-ai').addEventListener('click', startAI);
+    document.getElementById('btn-skip').addEventListener('click', goToChecklist);
+    document.getElementById('btn-finish').addEventListener('click', finishCheck);
+
+    // סגירת פופ-אפ בלחיצה בחוץ
+    document.addEventListener('click', (e) => {
+        if(!e.target.closest('.field-group')) {
+            document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
         }
-        showScreen(1);
     });
-    
-    // כפתור ניתוח AI
-    if(btnAnalyze) btnAnalyze.addEventListener('click', startAiAnalysis);
 }
 
-function handleBrandChange() {
-    const brand = brandSelect.value;
-    modelSelect.innerHTML = '<option value="">בחר דגם...</option>';
-    engineSelect.innerHTML = '<option value="">בחר מנוע...</option>';
-    trimSelect.innerHTML = '<option value="">בחר גימור...</option>';
-    
-    modelSelect.disabled = !brand;
-    engineSelect.disabled = true;
-    trimSelect.disabled = true;
+// --- לוגיקת הפופ-אפים והנתונים ---
 
-    if (brand && CAR_DATA[brand]) {
-        CAR_DATA[brand].models.forEach(m => modelSelect.add(new Option(m, m)));
+function openPicker(type) {
+    // סגור את כל האחרים
+    document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
+    
+    // אם השדה נעול - אל תפתח
+    if(document.getElementById(`${type}-trigger`).classList.contains('disabled')) return;
+
+    const popup = document.getElementById(`${type}-popup`);
+    popup.classList.add('active');
+    
+    const grid = document.getElementById(`${type}-grid`);
+    
+    // מניעת טעינה כפולה (למעט מודלים שמשתנים)
+    if (grid.children.length > 0 && type !== 'model' && type !== 'engine') return;
+
+    grid.innerHTML = ''; // ניקוי לפני מילוי
+
+    if (type === 'brand') {
+        Object.keys(CAR_DATA).sort().forEach(b => createItem(grid, b, 'brand'));
+    } 
+    else if (type === 'model') {
+        const selectedBrand = document.getElementById('val-b').value;
+        if(selectedBrand && CAR_DATA[selectedBrand]) {
+            CAR_DATA[selectedBrand].models.forEach(m => createItem(grid, m, 'model'));
+        }
+    } 
+    else if (type === 'year') {
+        for(let y = 2026; y >= 2008; y--) createItem(grid, y, 'year');
+    }
+    else if (type === 'engine') {
+        const selectedBrand = document.getElementById('val-b').value;
+        if(selectedBrand && CAR_DATA[selectedBrand]) {
+            CAR_DATA[selectedBrand].engines.forEach(e => createItem(grid, e, 'engine'));
+        }
     }
 }
 
-function handleModelChange() {
-    const brand = brandSelect.value;
-    if (brand && modelSelect.value) {
-        engineSelect.innerHTML = '<option value="">בחר מנוע...</option>';
-        trimSelect.innerHTML = '<option value="">בחר גימור...</option>';
-        
-        CAR_DATA[brand].engines.forEach(e => engineSelect.add(new Option(e, e)));
-        CAR_DATA[brand].trims.forEach(t => trimSelect.add(new Option(t, t)));
-        
-        engineSelect.disabled = false;
-        trimSelect.disabled = false;
+function createItem(grid, val, type) {
+    const d = document.createElement('div');
+    d.className = 'grid-item';
+    d.innerText = val;
+    d.addEventListener('click', (e) => {
+        e.stopPropagation(); // מונע סגירה מיידית
+        selectValue(type, val);
+    });
+    grid.appendChild(d);
+}
+
+function selectValue(type, val) {
+    // שמירת הערך
+    document.getElementById(`val-${type.charAt(0)}`).value = val;
+    // עדכון התצוגה
+    document.getElementById(`${type}-trigger`).querySelector('span').innerText = val;
+    // סגירת הפופ-אפ
+    document.getElementById(`${type}-popup`).classList.remove('active');
+
+    // לוגיקת שרשרת (reset למה שתלוי בבחירה הזו)
+    if(type === 'brand') {
+        resetField('model');
+        resetField('year');
+        resetField('engine');
+        enableField('model');
     }
+    if(type === 'model') {
+        resetField('year');
+        resetField('engine');
+        enableField('year');
+    }
+    if(type === 'year') {
+        resetField('engine');
+        enableField('engine');
+    }
+
+    checkForm();
 }
 
-function showScreen(index) {
-    // הסתרת הכל והצגת המסך הרלוונטי
-    screens.forEach(s => s.classList.remove('active'));
-    screens[index].classList.add('active');
-    
-    // אם עברנו למסך הצ'קליסט - בנה אותו
-    if (index === 1) generateChecklist();
-    
-    // גלילה למעלה
-    window.scrollTo(0, 0);
+function resetField(id) {
+    document.getElementById(`val-${id.charAt(0)}`).value = '';
+    document.getElementById(`${id}-trigger`).classList.add('disabled');
+    document.getElementById(`${id}-trigger`).querySelector('span').innerText = 'בחר...';
 }
 
-function generateChecklist() {
-    checklistContent.innerHTML = '';
-    
-    CHECKLIST_CONFIG.forEach(category => {
-        // כותרת קטגוריה
-        const header = document.createElement('h3');
-        header.innerText = category.category; // האימוג'י מגיע מה-config
-        header.style.borderBottom = '1px solid #333';
-        header.style.paddingBottom = '5px';
-        header.style.marginTop = '20px';
-        checklistContent.appendChild(header);
+function enableField(id) {
+    document.getElementById(`${id}-trigger`).classList.remove('disabled');
+}
 
-        category.items.forEach(item => {
-            const row = document.createElement('div');
-            row.className = 'check-item';
-            // כאן אנחנו מוודאים שהאימוג'י של המידע (ℹ️) מופיע!
-            row.innerHTML = `
-                <input type="checkbox" id="${item.id}" class="car-check">
-                <label for="${item.id}">${item.name}</label>
-                <button class="info-btn" onclick="alert('${item.howTo}')">ℹ️</button>
-            `;
-            checklistContent.appendChild(row);
-        });
+function filterGrid(type, query) {
+    const grid = document.getElementById(`${type}-grid`);
+    const items = Array.from(grid.children);
+    items.forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(query.toLowerCase()) ? 'flex' : 'none';
     });
 }
 
-async function startAiAnalysis() {
-    const brand = brandSelect.value;
-    const model = modelSelect.value;
-    const year = yearSelect.value;
-    const engine = engineSelect.value || "לא ידוע";
+function checkForm() {
+    const b = document.getElementById('val-b').value;
+    const m = document.getElementById('val-m').value;
+    const y = document.getElementById('val-y').value;
+    const e = document.getElementById('val-e').value;
     
-    const faults = [];
-    document.querySelectorAll('.car-check:checked').forEach(cb => {
-        const labelText = cb.nextElementSibling.innerText;
-        faults.push(labelText);
-    });
+    // מפעיל את כפתור ה-AI רק אם הכל נבחר
+    document.getElementById('btn-ai').disabled = !(b && m && y && e);
+}
 
-    // מעבר למסך תוצאות
-    showScreen(2);
-    const resultsDiv = document.getElementById('ai-results');
-    resultsDiv.innerHTML = '<div class="loading">🤖 המכונאי הדיגיטלי מנתח את הנתונים...<br>זה ייקח כמה שניות.</div>';
+// --- לוגיקת AI ---
+async function startAI() {
+    const b = document.getElementById('val-b').value;
+    const m = document.getElementById('val-m').value;
+    const y = document.getElementById('val-y').value;
+    const e = document.getElementById('val-e').value;
+    const t = document.getElementById('trim-input').value;
+
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('btn-ai').disabled = true;
 
     try {
-        const response = await fetch('/analyze-ai', {
+        const res = await fetch('/analyze-ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ brand, model, year, engine, trim: trimSelect.value, faults })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ brand:b, model:m, year:y, engine:e, trim:t, faults: [] }) // שולח רשימת תקלות ריקה בשלב זה
         });
-
-        const data = await response.json();
+        const data = await res.json();
+        
         if(data.success) {
-            displayResults(data.aiAnalysis);
+            renderAI(data.aiAnalysis);
         } else {
-            resultsDiv.innerHTML = '<p style="color:red">שגיאה בקבלת הנתונים. נסה שוב.</p>';
+            alert("שגיאה בניתוח הנתונים");
         }
-    } catch (e) {
-        console.error(e);
-        resultsDiv.innerHTML = '<p style="color:red">שגיאה בתקשורת עם השרת.</p>';
+    } catch(err) {
+        alert("שגיאת תקשורת עם השרת");
+        console.error(err);
+    } finally {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('btn-ai').disabled = false;
     }
 }
 
-function displayResults(data) {
-    const resultsDiv = document.getElementById('ai-results');
-    // צבע הציון
-    let color = '#4CAF50'; // ירוק
-    if (data.reliability_score < 75) color = '#FFC107'; // צהוב
-    if (data.reliability_score < 50) color = '#F44336'; // אדום
-
-    resultsDiv.innerHTML = `
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 4rem; font-weight: bold; color: ${color};">${data.reliability_score}</div>
-            <div>ציון אמינות משוקלל</div>
+function renderAI(ai) {
+    const p = document.getElementById('ai-panel');
+    p.style.display = 'block';
+    
+    // בניית ה-HTML של התוצאה בתוך הבועה
+    let faultsHtml = ai.common_faults.map(f => `<li>${f}</li>`).join('');
+    
+    p.innerHTML = `
+        <div style="background:var(--card-bg); padding:20px; border-radius:20px; border:1px solid var(--accent); animation: slideUp 0.5s;">
+            <div style="text-align:center; font-size:45px; font-weight:900; color:var(--accent);">${ai.reliability_score}</div>
+            <p style="text-align:center; font-size:15px; color:var(--text-muted);">${ai.summary}</p>
+            <div style="margin-top:15px; text-align:right;">
+                <b style="color:var(--danger)">⚠️ תקלות נפוצות ועלויות:</b>
+                <ul style="font-size:13px; color:#cbd5e1; padding-right: 20px;">${faultsHtml}</ul>
+                <div style="margin-top:10px; padding:10px; background:rgba(16, 185, 129, 0.1); border-radius:8px;">
+                    <b style="color:var(--success)">💰 טיפ למו"מ:</b><br>
+                    <span style="font-size:13px;">${ai.negotiation_tip}</span>
+                </div>
+            </div>
+            <button id="btn-continue-check" class="btn-main" style="margin-top:20px;">המשך לבדיקת שטח 🏁</button>
         </div>
-        <div style="background: #252525; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <h3>📝 סיכום</h3>
-            <p>${data.summary}</p>
-        </div>
-        <div style="background: rgba(244, 67, 54, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #F44336;">
-            <h3 style="color: #F44336; margin-top: 0;">🔧 תקלות ועלויות</h3>
-            <ul>
-                ${data.common_faults.map(f => `<li>${f}</li>`).join('')}
-            </ul>
-        </div>
-        <div style="background: rgba(76, 175, 80, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #4CAF50;">
-            <h3 style="color: #4CAF50; margin-top: 0;">💰 המלצה למו"מ</h3>
-            <p><strong>${data.negotiation_tip}</strong></p>
-        </div>
-        <button onclick="location.reload()" class="primary-btn" style="background: #333; margin-top: 20px;">בדיקה חדשה</button>
     `;
+    
+    // גלילה לתוצאה
+    p.scrollIntoView({behavior:'smooth'});
+    
+    // חיבור הכפתור שנוצר דינמית
+    document.getElementById('btn-continue-check').addEventListener('click', goToChecklist);
 }
 
-// הפעלה
-document.addEventListener('DOMContentLoaded', init);
+// --- צ'קליסט ---
+function goToChecklist() {
+    document.getElementById('screen-input').style.display = 'none';
+    document.getElementById('screen-check').style.display = 'block';
+    window.scrollTo(0, 0);
+
+    const container = document.getElementById('checklist-content');
+    container.innerHTML = '';
+    
+    CHECKLIST_CONFIG.forEach((cat, cIdx) => {
+        const header = document.createElement('div');
+        header.className = 'category-header';
+        header.innerHTML = `<span class="category-title">${cat.category}</span>`;
+        container.appendChild(header);
+
+        cat.items.forEach((item, iIdx) => {
+            const id = `cb-${cIdx}-${iIdx}`;
+            
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'check-item';
+            itemDiv.innerHTML = `
+                <div class="check-item-header">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="info-btn" id="info-${id}">i</div>
+                        <span style="font-weight:600;">${item.name}</span>
+                    </div>
+                    <div id="${id}" class="cb-custom"></div>
+                </div>
+                <div id="how-${id}" class="how-to-box">
+                    ${item.howTo}<br>
+                    <span style="color:var(--danger)">חומרה: ${item.severity === 'critical' ? 'קריטית 🛑' : 'רגילה ⚠️'}</span>
+                </div>`;
+            
+            container.appendChild(itemDiv);
+
+            // אירועים
+            itemDiv.querySelector(`#info-${id}`).addEventListener('click', () => toggleHow(id));
+            itemDiv.querySelector(`#${id}`).addEventListener('click', () => toggleCheck(id, item));
+        });
+    });
+}
+
+function toggleHow(id) {
+    const el = document.getElementById('how-' + id);
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+function toggleCheck(id, item) {
+    const el = document.getElementById(id);
+    const isBad = el.classList.contains('bad');
+    
+    if(isBad) {
+        // ביטול סימון
+        el.classList.remove('bad');
+        score += (item.severity === 'critical' ? 25 : 10); // החזרת ניקוד
+        defects = defects.filter(d => d !== item.name);
+    } else {
+        // סימון תקלה
+        el.classList.add('bad');
+        score -= (item.severity === 'critical' ? 25 : 10); // הורדת ניקוד
+        defects.push(item.name);
+    }
+}
+
+function finishCheck() {
+    document.getElementById('screen-check').style.display = 'none';
+    document.getElementById('screen-result').style.display = 'block';
+    
+    const finalScore = Math.max(0, score);
+    const gauge = document.getElementById('final-gauge');
+    
+    // אנימציית ספירה
+    let current = 0;
+    const timer = setInterval(() => {
+        current += 2;
+        if(current >= finalScore) {
+            current = finalScore;
+            clearInterval(timer);
+        }
+        gauge.innerText = current;
+        
+        // צבעים
+        const color = current > 85 ? "var(--success)" : (current > 60 ? "var(--plate-yellow)" : "var(--danger)");
+        gauge.style.color = color; 
+        gauge.style.borderColor = color;
+    }, 20);
+
+    const statusText = finalScore > 85 ? "רכב במצב מעולה! ✅" : (finalScore > 60 ? "מצב סביר, דורש תיקון ⚠️" : "לא לגעת! סכנה ❌");
+    document.getElementById('result-status').innerText = statusText;
+    
+    if(defects.length > 0) {
+        document.getElementById('defects-container').style.display = 'block';
+        document.getElementById('defects-ul').innerHTML = defects.map(d => `<li>${d}</li>`).join('');
+    }
+}
