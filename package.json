@@ -1,7 +1,9 @@
 {
-  "name": "carcheck-ai-pro",
-  "version": "2.0.0",
+  "name": "carcheck-ai-final",
+  "version": "4.0.0",
+  "description": "Car Inspection AI Tool",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
