@@ -11,110 +11,145 @@ app.use(express.static(path.join(__dirname)));
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// === זיכרון מטמון (Database זמני) ===
-// כאן נשמור את התוצאות כדי לא לשאול את גוגל כל פעם מחדש
+// === רשימת המודלים לגיבוי (לפי סדר עדיפות) ===
+const AI_MODELS = [
+    "gemini-1.5-flash",        // עדיפות 1: הכי מהיר וזול
+    "gemini-2.0-flash-exp",    // עדיפות 2: גרסה חדשה ומהירה
+    "gemini-1.5-pro"           // עדיפות 3: הכי חכם (אך איטי יותר)
+];
+
+// === זיכרון מטמון ===
 const SPECS_DB = {}; 
 
-// === 1. פרומפט לשליפת מפרטים (מנוע/גימור) ===
+// === פונקציית העל: מנסה מודלים בשרשרת ===
+// זו הפונקציה החכמה שתציל אותנו מקריסות
+async function callAIWithFallback(promptText) {
+    let lastError = null;
+
+    for (const model of AI_MODELS) {
+        try {
+            console.log(`🤖 מנסה את מודל: ${model}...`);
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }],
+                    // ביטול חסימות כדי שהמודל השני לא ייחסם גם הוא
+                    safetySettings: [
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                    ],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            const data = await response.json();
+
+            // אם יש שגיאה מה-API עצמו
+            if (data.error) throw new Error(data.error.message);
+            
+            // אם אין תוכן
+            if (!data.candidates || !data.candidates[0]) throw new Error("תשובה ריקה מהמודל");
+
+            // הצלחה! מחזירים את הטקסט
+            return data.candidates[0].content.parts[0].text;
+
+        } catch (error) {
+            console.warn(`⚠️ מודל ${model} נכשל: ${error.message}`);
+            lastError = error;
+            // ממשיכים למודל הבא בלולאה...
+        }
+    }
+
+    // אם הגענו לפה - כל המודלים נכשלו
+    throw lastError;
+}
+
+// === הפרומפטים ===
 const generateSpecsPrompt = (brand, model, year) => {
     return `
-    List the engine options and trim levels (רמות גימור) for a ${year} ${brand} ${model} sold in Israel.
+    List the engine options and trim levels for a ${year} ${brand} ${model} sold in Israel.
     Return JSON only:
-    {
-      "engines": ["1.6 Hybrid", "1.8 Petrol", ...],
-      "trims": ["Style", "Premium", "Iconic", ...]
-    }
-    Make sure the data is accurate for the Israeli market.
+    { "engines": ["1.6 Petrol", "Hybrid"], "trims": ["Active", "Premium"] }
     `;
 };
 
-// === 2. פרומפט לניתוח הרכב (הקיים) ===
 const generateAnalysisPrompt = (brand, model, year, engine, trim, faults) => {
     return `
-    אתה שמאי רכב ומוסכניק ישראלי מומחה.
-    רכב: ${brand} ${model} שנת ${year} (${engine}).
-    גימור: ${trim}.
-    ליקויים שדווחו: ${faults && faults.length > 0 ? faults.join(', ') : "ללא ליקויים מיוחדים."}
-
-    תחזיר רק JSON בפורמט הזה:
+    אתה שמאי רכב ומוסכניק ישראלי מומחה. רכב: ${brand} ${model} ${year} (${engine}), גימור: ${trim}.
+    ליקויים: ${faults && faults.length > 0 ? faults.join(', ') : "ללא ליקויים מיוחדים."}
+    תחזיר רק JSON:
     {
       "reliability_score": מספר (1-100),
-      "summary": "סיכום קצר בעברית",
-      "common_faults": ["תקלה 1 - עלות: X שח", "תקלה 2 - עלות: Y שח"],
+      "summary": "סיכום בעברית",
+      "common_faults": ["תקלה 1 - מחיר", "תקלה 2 - מחיר"],
       "negotiation_tip": "טיפ למומ"
     }
     `;
 };
 
-// נתיב חדש: מביא מנועים ורמות גימור
+// === נתיב 1: שליפת מפרטים (עם גיבוי משולש) ===
 app.post('/get-specs', async (req, res) => {
     const { brand, model, year } = req.body;
     const cacheKey = `${brand}-${model}-${year}`;
 
-    console.log(`🔍 מחפש מפרט עבור: ${cacheKey}`);
+    if (SPECS_DB[cacheKey]) return res.json({ success: true, data: SPECS_DB[cacheKey] });
 
-    // 1. בדיקה האם יש לנו את זה כבר בזיכרון (חוסך זמן וכסף)
-    if (SPECS_DB[cacheKey]) {
-        console.log("⚡ נמצא בזיכרון!");
-        return res.json({ success: true, data: SPECS_DB[cacheKey] });
-    }
-
-    // 2. אם אין - שואלים את ה-AI
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: generateSpecsPrompt(brand, model, year) }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            })
-        });
+        if (!API_KEY) throw new Error("Missing API Key");
 
-        const data = await response.json();
-        let aiText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-        const specs = JSON.parse(aiText);
-
-        // 3. שמירה בזיכרון לפעם הבאה
-        SPECS_DB[cacheKey] = specs;
+        // קריאה לפונקציה החכמה שמחליפה מודלים
+        const aiText = await callAIWithFallback(generateSpecsPrompt(brand, model, year));
         
+        // ניקוי ופרסור ה-JSON
+        const cleanJson = aiText.replace(/```json|```/g, '').trim();
+        const specs = JSON.parse(cleanJson);
+
+        SPECS_DB[cacheKey] = specs;
         res.json({ success: true, data: specs });
 
     } catch (error) {
-        console.error("Error fetching specs:", error);
-        // במקרה חירום מחזירים רשימה גנרית כדי לא לתקוע את האפליקציה
-        res.json({ success: false, data: { engines: ["בנזין", "היברידי"], trims: ["לא ידוע"] } });
+        console.error("❌ כל המודלים נכשלו. מפעיל חירום:", error.message);
+        
+        // רשת ביטחון אחרונה - סטטי
+        res.json({ 
+            success: true, 
+            data: { 
+                engines: ["בנזין", "טורבו", "היברידי", "דיזל", "חשמלי"], 
+                trims: ["רמת גימור בסיסית", "רמת גימור גבוהה", "לא ידוע"] 
+            },
+            is_fallback: true
+        });
     }
 });
 
-// נתיב הניתוח (הרגיל)
+// === נתיב 2: ניתוח (עם גיבוי משולש) ===
 app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year, engine, trim, faults } = req.body;
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: generateAnalysisPrompt(brand, model, year, engine, trim, faults) }] }],
-                safetySettings: [
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                ],
-                generationConfig: { responseMimeType: "application/json" }
-            })
-        });
 
-        const data = await response.json();
-        let aiText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(aiText);
+        // קריאה לפונקציה החכמה
+        const aiText = await callAIWithFallback(generateAnalysisPrompt(brand, model, year, engine, trim, faults));
+        
+        const cleanJson = aiText.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(cleanJson);
         
         res.json({ success: true, aiAnalysis: result });
 
     } catch (error) {
-        console.error("AI Error:", error);
-        res.status(500).json({ success: false });
+        console.error("Analysis Failed:", error);
+        res.status(500).json({ 
+            success: false, 
+            aiAnalysis: {
+                reliability_score: 70,
+                summary: "לא ניתן ליצור קשר עם שרת הניתוח כרגע.",
+                common_faults: ["שגיאת תקשורת"],
+                negotiation_tip: "נסה שוב מאוחר יותר"
+            }
+        });
     }
 });
 
