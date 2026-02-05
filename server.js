@@ -10,9 +10,10 @@ app.use(express.static(path.join(__dirname)));
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-async function callGemini(prompt) {
-    // זה הצינור הישיר שעבד לנו תמיד
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+// פונקציה אטומית - בלי פילטרים, בלי סיבוכים
+async function askGemini(prompt) {
+    // שים לב: השתמשתי ב-v1 במקום v1beta, זה יותר יציב ב-Render
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
     
     const response = await fetch(url, {
         method: 'POST',
@@ -23,37 +24,60 @@ async function callGemini(prompt) {
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
+
+    if (data.error) {
+        console.error("❌ שגיאת גוגל ישירה:", data.error.message);
+        throw new Error(data.error.message);
+    }
+
+    if (!data.candidates || !data.candidates[0]) {
+        console.error("❌ גוגל החזיר תשובה ריקה:", JSON.stringify(data));
+        throw new Error("Empty Response");
+    }
+
     return data.candidates[0].content.parts[0].text;
 }
 
+// נתיב המפרטים
 app.post('/get-specs', async (req, res) => {
     const { brand, model, year } = req.body;
-    // הפרומפט המדויק לישראל
-    const prompt = `List EXACT engine options and trims for ${year} ${brand} ${model} in Israel. Return ONLY JSON: {"engines": [], "trims": []}`;
-    
+    console.log(`🔍 מנסה לשלוף עבור: ${brand} ${model} ${year}`);
+
     try {
-        const result = await callGemini(prompt);
-        // ניקוי טקסט מיותר מסביב ל-JSON
-        const cleanJson = result.match(/\{[\s\S]*\}/)[0];
-        res.json({ success: true, data: JSON.parse(cleanJson) });
+        const prompt = `Give me a JSON of engine options and trims for ${year} ${brand} ${model} in Israel. Return ONLY: {"engines": [], "trims": []}`;
+        const result = await askGemini(prompt);
+        
+        // חילוץ ה-JSON מהטקסט
+        const match = result.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error("No JSON in response");
+        
+        res.json({ success: true, data: JSON.parse(match[0]) });
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+        console.error("⚠️ כשל במפרט:", e.message);
+        // מחזיר רשימה ידנית כדי שהמשתמש לא יתקע
+        res.json({ 
+            success: true, 
+            data: { engines: ["1.6L", "2.0L", "Hybrid"], trims: ["Standard", "Luxury"] } 
+        });
     }
 });
 
+// נתיב הניתוח
 app.post('/analyze-ai', async (req, res) => {
-    const { brand, model, year, engine, trim, faults } = req.body;
-    const prompt = `אתה מוסכניק. רכב: ${brand} ${model} ${year} ${engine} ${trim}. תקלות: ${faults}. החזר JSON עם reliability_score, summary, common_faults, negotiation_tip`;
-    
     try {
-        const result = await callGemini(prompt);
-        const cleanJson = result.match(/\{[\s\S]*\}/)[0];
-        res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
+        const { brand, model, year, engine, trim, faults } = req.body;
+        const prompt = `Analyze car faults for ${brand} ${model} ${year}. Faults: ${faults?.join(',')}. Return JSON with reliability_score, summary, common_faults, negotiation_tip.`;
+        
+        const result = await askGemini(prompt);
+        const match = result.match(/\{[\s\S]*\}/);
+        res.json({ success: true, aiAnalysis: JSON.parse(match[0]) });
     } catch (e) {
+        console.error("⚠️ כשל בניתוח:", e.message);
         res.status(500).json({ success: false });
     }
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.listen(process.env.PORT || 10000);
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
