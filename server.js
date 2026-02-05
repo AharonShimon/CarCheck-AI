@@ -5,93 +5,120 @@ const path = require('path');
 
 const app = express();
 
-// === הגדרות אבטחה ומידע ===
 app.use(cors());
 app.use(express.json());
-
-// === 🚨 התיקון הקריטי לעיצוב 🚨 ===
-// השורה הזו אומרת לשרת: "מותר לך להגיש את style.css, app.js ו-config.js לדפדפן"
-app.use(express.static(path.join(__dirname))); 
+app.use(express.static(path.join(__dirname)));
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// === המוח: יצירת הפרומפט ל-AI ===
-const generatePrompt = (brand, model, year, engine, trim, faults) => {
-    return `
-    פעל כמו שמאי רכב ומוסכניק בכיר וקשוח בישראל.
-    הרכב הנבדק: ${brand} ${model} שנת ${year}
-    מנוע: ${engine}
-    רמת גימור: ${trim}
-    
-    בבדיקה הפיזית נמצאו הליקויים הבאים:
-    ${faults.length > 0 ? faults.join(', ') : "הרכב נראה נקי מליקויים חיצוניים/מכאניים ברורים."}
+// === זיכרון מטמון (Database זמני) ===
+// כאן נשמור את התוצאות כדי לא לשאול את גוגל כל פעם מחדש
+const SPECS_DB = {}; 
 
-    עליך להחזיר פלט JSON בלבד (ללא טקסט נוסף) במבנה הבא:
+// === 1. פרומפט לשליפת מפרטים (מנוע/גימור) ===
+const generateSpecsPrompt = (brand, model, year) => {
+    return `
+    List the engine options and trim levels (רמות גימור) for a ${year} ${brand} ${model} sold in Israel.
+    Return JSON only:
     {
-      "reliability_score": מספר בין 1-100,
-      "summary": "סיכום קצר וחד על הרכב (האם זו עסקה טובה או בור ללא תחתית?)",
-      "common_faults": [
-        "שם הליקוי שמצא המשתמש (או מחלה ידועה של הרכב) - עלות תיקון מוערכת: X-Y ₪"
-      ],
-      "negotiation_tip": "המלצה סופית: כמה להוריד מהמחירון בשקלים עקב הליקויים?"
+      "engines": ["1.6 Hybrid", "1.8 Petrol", ...],
+      "trims": ["Style", "Premium", "Iconic", ...]
     }
-    
-    הנחיות קריטיות:
-    1. אם המשתמש מצא "בועות במים" או "טחינה בשמן" - זה נזק מנוע קריטי, הציון חייב להיות מתחת ל-40.
-    2. תן מחירים ריאליים למוסכים בישראל.
+    Make sure the data is accurate for the Israeli market.
     `;
 };
 
-// === הנתיב שמקבל את הבקשה מהאפליקציה ===
-app.post('/analyze-ai', async (req, res) => {
-    try {
-        const { brand, model, year, engine, trim, faults } = req.body;
-        
-        console.log(`🤖 מנתח רכב: ${brand} ${model} (${year})`);
+// === 2. פרומפט לניתוח הרכב (הקיים) ===
+const generateAnalysisPrompt = (brand, model, year, engine, trim, faults) => {
+    return `
+    אתה שמאי רכב ומוסכניק ישראלי מומחה.
+    רכב: ${brand} ${model} שנת ${year} (${engine}).
+    גימור: ${trim}.
+    ליקויים שדווחו: ${faults && faults.length > 0 ? faults.join(', ') : "ללא ליקויים מיוחדים."}
 
-        // שליחה לגוגל ג'מיני
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+    תחזיר רק JSON בפורמט הזה:
+    {
+      "reliability_score": מספר (1-100),
+      "summary": "סיכום קצר בעברית",
+      "common_faults": ["תקלה 1 - עלות: X שח", "תקלה 2 - עלות: Y שח"],
+      "negotiation_tip": "טיפ למומ"
+    }
+    `;
+};
+
+// נתיב חדש: מביא מנועים ורמות גימור
+app.post('/get-specs', async (req, res) => {
+    const { brand, model, year } = req.body;
+    const cacheKey = `${brand}-${model}-${year}`;
+
+    console.log(`🔍 מחפש מפרט עבור: ${cacheKey}`);
+
+    // 1. בדיקה האם יש לנו את זה כבר בזיכרון (חוסך זמן וכסף)
+    if (SPECS_DB[cacheKey]) {
+        console.log("⚡ נמצא בזיכרון!");
+        return res.json({ success: true, data: SPECS_DB[cacheKey] });
+    }
+
+    // 2. אם אין - שואלים את ה-AI
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: generatePrompt(brand, model, year, engine, trim, faults) }] }],
+                contents: [{ parts: [{ text: generateSpecsPrompt(brand, model, year) }] }],
                 generationConfig: { responseMimeType: "application/json" }
             })
         });
 
         const data = await response.json();
+        let aiText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+        const specs = JSON.parse(aiText);
 
-        // טיפול בתשובה מה-AI
-        if (data.candidates && data.candidates[0].content) {
-            let aiText = data.candidates[0].content.parts[0].text;
-            // ניקוי סימנים מיותרים אם ה-AI מוסיף אותם בטעות
-            aiText = aiText.replace(/```json|```/g, '').trim();
-            
-            const result = JSON.parse(aiText);
-            res.json({ success: true, aiAnalysis: result });
-        } else {
-            throw new Error("Invalid AI response");
-        }
+        // 3. שמירה בזיכרון לפעם הבאה
+        SPECS_DB[cacheKey] = specs;
+        
+        res.json({ success: true, data: specs });
 
     } catch (error) {
-        console.error("Server Error:", error);
-        res.status(500).json({ 
-            success: false, 
-            aiAnalysis: {
-                reliability_score: 0,
-                summary: "שגיאה בתקשורת עם השרת. נסה שוב מאוחר יותר.",
-                common_faults: [],
-                negotiation_tip: "לא ניתן לחשב כרגע."
-            }
-        });
+        console.error("Error fetching specs:", error);
+        // במקרה חירום מחזירים רשימה גנרית כדי לא לתקוע את האפליקציה
+        res.json({ success: false, data: { engines: ["בנזין", "היברידי"], trims: ["לא ידוע"] } });
     }
 });
 
-// === נתיב ברירת מחדל (מחזיר את האתר עצמו) ===
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// נתיב הניתוח (הרגיל)
+app.post('/analyze-ai', async (req, res) => {
+    try {
+        const { brand, model, year, engine, trim, faults } = req.body;
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: generateAnalysisPrompt(brand, model, year, engine, trim, faults) }] }],
+                safetySettings: [
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                ],
+                generationConfig: { responseMimeType: "application/json" }
+            })
+        });
+
+        const data = await response.json();
+        let aiText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(aiText);
+        
+        res.json({ success: true, aiAnalysis: result });
+
+    } catch (error) {
+        console.error("AI Error:", error);
+        res.status(500).json({ success: false });
+    }
 });
 
-// === הפעלת השרת ===
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 CarCheck Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
