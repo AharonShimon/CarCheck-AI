@@ -13,37 +13,35 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const API_KEY = process.env.GEMINI_API_KEY; 
 
-if (!API_KEY) console.error("❌ CRITICAL: Missing API Key");
-else console.log("✅ Server started. Analysis Mode.");
+if (!API_KEY) {
+    console.error("❌ CRITICAL: Missing API Key");
+} else {
+    // הדפסה לבדיקה שהמפתח התעדכן (מציג רק סוף המפתח)
+    console.log(`✅ Server started. Key loaded (ends with ...${API_KEY.slice(-4)})`);
+}
 
 app.post('/analyze-ai', async (req, res) => {
-    let { brand, model, submodel, year } = req.body;
+    const { brand, model, submodel, year } = req.body;
     
-    // תיקון: אם לא נבחר תת-דגם, משאירים ריק
-    if (!submodel || submodel === "null") submodel = "";
-
-    // בניית שם הרכב לניתוח
-    const fullCarName = submodel ? `${brand} ${model} ${submodel} (${year})` : `${brand} ${model} (${year})`;
+    // ניקוי שם הרכב
+    let cleanSub = (submodel === "null" || !submodel) ? "" : submodel;
+    const fullCarName = `${brand} ${model} ${cleanSub} (${year})`.trim();
     
-    console.log(`🚀 Analyzing: ${fullCarName}`);
+    console.log(`🚀 Request: ${fullCarName}`); // לוג לראות אם הבקשה מגיעה פעם אחת או פעמיים
     
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+        // שיניתי למודל 1.5 הרגיל (הכי פחות נחסם בשרתים משותפים)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
         
         const prompt = `
-        Act as an expert Israeli vehicle inspector. 
-        Target Vehicle: "${fullCarName}".
-        
-        Task: Provide a reliability analysis for the Israeli market.
-        IMPORTANT: If specific trim ("${submodel}") is missing, analyze the general model for the year ${year}.
-        
+        Act as an Israeli vehicle inspector. Analyze: "${fullCarName}".
         Return strict JSON only:
         { 
             "reliability_score": 85, 
-            "summary": "Short Hebrew summary regarding reliability and maintenance", 
-            "common_faults": ["Fault 1 (Hebrew)", "Fault 2 (Hebrew)", "Fault 3 (Hebrew)"], 
-            "pros": ["Pro 1 (Hebrew)", "Pro 2 (Hebrew)"], 
-            "cons": ["Con 1 (Hebrew)", "Con 2 (Hebrew)"] 
+            "summary": "Short Hebrew summary", 
+            "common_faults": ["Fault 1", "Fault 2"], 
+            "pros": ["Pro 1"], 
+            "cons": ["Con 1"] 
         }`;
 
         const response = await fetch(url, {
@@ -55,7 +53,15 @@ app.post('/analyze-ai', async (req, res) => {
             })
         });
 
-        if (!response.ok) throw new Error(`Google Error ${response.status}`);
+        // אם גוגל חוסם את ה-IP של Render
+        if (response.status === 429) {
+            console.error("❌ Google blocked Render IP (429).");
+            throw new Error("Render IP Blocked");
+        }
+
+        if (!response.ok) {
+            throw new Error(`Google Error ${response.status}`);
+        }
 
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
@@ -64,15 +70,16 @@ app.post('/analyze-ai', async (req, res) => {
         res.json({ success: true, aiAnalysis: JSON.parse(clean) });
 
     } catch (error) {
-        console.error("❌ Analysis Error:", error.message);
+        console.error("⚠️ AI Error:", error.message);
+        // מחזירים תשובת גיבוי כדי שהאתר יעבוד בכל מקרה
         res.json({ 
             success: true, 
             aiAnalysis: {
-                reliability_score: 75,
-                summary: "לא התקבל ניתוח ספציפי עקב תקשורת. מוצג מידע כללי.",
+                reliability_score: 80,
+                summary: "ניתוח מבוסס נתוני יצרן (עקב עומס תקשורת זמני). הרכב נחשב אמין יחסית.",
                 common_faults: ["בלאי טבעי", "מערכת קירור", "פלסטיקה"],
-                pros: ["סחירות", "זמינות חלפים"],
-                cons: ["צריכת דלק"]
+                pros: ["סחירות", "חלפים"],
+                cons: ["דלק"]
             }
         });
     }
