@@ -4,74 +4,94 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+
+// === הגדרות אבטחה ומידע ===
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
+// === 🚨 התיקון הקריטי לעיצוב 🚨 ===
+// השורה הזו אומרת לשרת: "מותר לך להגיש את style.css, app.js ו-config.js לדפדפן"
+app.use(express.static(path.join(__dirname))); 
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
-// === ה-Prompt החדש: בוחן קשוח + מנהל מו"מ ===
-const generatePrompt = (brand, model, year, engine, faults) => {
+// === המוח: יצירת הפרומפט ל-AI ===
+const generatePrompt = (brand, model, year, engine, trim, faults) => {
     return `
-    אתה שמאי רכב ומוסכניק בכיר בישראל.
-    הרכב הנבדק: ${brand} ${model} שנת ${year} (מנוע ${engine}).
+    פעל כמו שמאי רכב ומוסכניק בכיר וקשוח בישראל.
+    הרכב הנבדק: ${brand} ${model} שנת ${year}
+    מנוע: ${engine}
+    רמת גימור: ${trim}
     
-    המערכת זיהתה את הליקויים הבאים בבדיקה פיזית:
-    ${faults.length > 0 ? faults.join(', ') : "לא נמצאו ליקויים מיוחדים (רכב נקי)."}
+    בבדיקה הפיזית נמצאו הליקויים הבאים:
+    ${faults.length > 0 ? faults.join(', ') : "הרכב נראה נקי מליקויים חיצוניים/מכאניים ברורים."}
 
-    משימה:
-    1. תן ציון אמינות משוקלל (1-100) לרכב הזה ספציפית.
-    2. עבור כל ליקוי שנמצא, הערך את עלות התיקון בשקלים (טווח מינימום-מקסימום) לפי מחירי מוסכים בישראל.
-    3. אם אין ליקויים, ציין מחלות ידועות של הדגם שכדאי להיזהר מהן בעתיד.
-    4. סיכום: כמה כסף להוריד למוכר במשא ומתן?
-
-    החזר JSON בלבד:
+    עליך להחזיר פלט JSON בלבד (ללא טקסט נוסף) במבנה הבא:
     {
-      "reliability_score": מספר,
-      "summary": "סיכום מילולי קצר",
-      "common_faults": ["ליקוי 1 - עלות מוערכת: X ₪", "ליקוי 2 - עלות מוערכת: Y ₪"],
-      "negotiation_tip": "המלצה כמה להוריד במחיר"
+      "reliability_score": מספר בין 1-100,
+      "summary": "סיכום קצר וחד על הרכב (האם זו עסקה טובה או בור ללא תחתית?)",
+      "common_faults": [
+        "שם הליקוי שמצא המשתמש (או מחלה ידועה של הרכב) - עלות תיקון מוערכת: X-Y ₪"
+      ],
+      "negotiation_tip": "המלצה סופית: כמה להוריד מהמחירון בשקלים עקב הליקויים?"
     }
+    
+    הנחיות קריטיות:
+    1. אם המשתמש מצא "בועות במים" או "טחינה בשמן" - זה נזק מנוע קריטי, הציון חייב להיות מתחת ל-40.
+    2. תן מחירים ריאליים למוסכים בישראל.
     `;
 };
 
+// === הנתיב שמקבל את הבקשה מהאפליקציה ===
 app.post('/analyze-ai', async (req, res) => {
-    const { brand, model, year, engine, faults } = req.body;
-    
-    console.log(`🔍 מנתח: ${brand} ${model} | ליקויים: ${faults.length}`);
-
     try {
+        const { brand, model, year, engine, trim, faults } = req.body;
+        
+        console.log(`🤖 מנתח רכב: ${brand} ${model} (${year})`);
+
+        // שליחה לגוגל ג'מיני
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: generatePrompt(brand, model, year, engine, faults) }] }],
+                contents: [{ parts: [{ text: generatePrompt(brand, model, year, engine, trim, faults) }] }],
                 generationConfig: { responseMimeType: "application/json" }
             })
         });
 
-        const json = await response.json();
-        const aiData = JSON.parse(json.candidates[0].content.parts[0].text);
-        
-        res.json({ success: true, aiAnalysis: aiData });
+        const data = await response.json();
+
+        // טיפול בתשובה מה-AI
+        if (data.candidates && data.candidates[0].content) {
+            let aiText = data.candidates[0].content.parts[0].text;
+            // ניקוי סימנים מיותרים אם ה-AI מוסיף אותם בטעות
+            aiText = aiText.replace(/```json|```/g, '').trim();
+            
+            const result = JSON.parse(aiText);
+            res.json({ success: true, aiAnalysis: result });
+        } else {
+            throw new Error("Invalid AI response");
+        }
 
     } catch (error) {
-        console.error("AI Error:", error);
-        // תשובת גיבוי למקרה של תקלה
-        res.json({ 
-            success: true, 
+        console.error("Server Error:", error);
+        res.status(500).json({ 
+            success: false, 
             aiAnalysis: {
-                reliability_score: 70,
-                summary: "לא ניתן היה להתחבר לשרת הניתוח כרגע.",
-                common_faults: ["דרושה בדיקה במוסך"],
-                negotiation_tip: "לא זמין"
-            } 
+                reliability_score: 0,
+                summary: "שגיאה בתקשורת עם השרת. נסה שוב מאוחר יותר.",
+                common_faults: [],
+                negotiation_tip: "לא ניתן לחשב כרגע."
+            }
         });
     }
 });
 
-// הגשת דף הבית
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// === נתיב ברירת מחדל (מחזיר את האתר עצמו) ===
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
+// === הפעלת השרת ===
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server V3.0 running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 CarCheck Server running on port ${PORT}`));
