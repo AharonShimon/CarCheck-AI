@@ -130,7 +130,8 @@ function selectValue(type, val) {
     }
     
     // סגירת הפופאפ
-    document.getElementById(`${type}-popup`).classList.remove('active');
+    const popup = document.getElementById(`${type}-popup`);
+    if (popup) popup.classList.remove('active');
 
     // --- שרשרת הניקוי והפתיחה (Cascade) ---
     if (type === 'brand') { 
@@ -214,7 +215,7 @@ async function startAnalysis() {
         const data = await res.json();
         
         if(data.success) {
-            AI(data.aiAnalysis);
+            renderAI(data.aiAnalysis); // תוקן מ-AI ל-renderAI כדי להתאים לשם הפונקציה
         } else {
             throw new Error("AI request failed");
         }
