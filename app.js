@@ -214,7 +214,7 @@ async function startAnalysis() {
         const data = await res.json();
         
         if(data.success) {
-            renderAI(data.aiAnalysis);
+            AI(data.aiAnalysis);
         } else {
             throw new Error("AI request failed");
         }
@@ -274,7 +274,6 @@ function renderCard() {
     if (!container) return;
     container.innerHTML = ''; 
 
-    // סיום הבדיקה
     if (currentTaskIndex >= flatChecklist.length) {
         finishCheck();
         return;
@@ -285,32 +284,43 @@ function renderCard() {
 
     const html = `
         <div class="progress-bar-container">
-            <div class="progress-text">משימה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
-            <div class="progress-track" style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin-top:5px;">
-                <div class="progress-fill" style="width:${progress}%; height:100%; background:var(--accent); transition: width 0.3s ease;"></div>
-            </div>
+            <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
+            <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
         </div>
 
         <div id="active-card" class="task-card slide-in">
-            <div style="background:rgba(255,255,255,0.1); align-self:flex-start; padding:4px 10px; border-radius:4px; font-size:12px; margin-bottom:10px; color:var(--accent); font-weight:bold;">
-                ${item.category}
-            </div>
-            
-            <div class="task-header">
-                <h4 style="margin:0; font-size:22px; color:white;">${item.name}</h4>
-            </div>
-            
-            <div class="task-details" style="margin:20px 0; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">
-                <div class="detail-row" style="margin-bottom:12px;"><span class="icon">📍</span> <strong>מיקום:</strong> ${item.location}</div>
-                <div class="detail-row"><span class="icon">🖐️</span> <strong>מה לעשות:</strong> ${item.action}</div>
+            <div>
+                <span class="category-label">${item.category}</span>
+                <div class="task-header">
+                    <h4>${item.name}</h4>
+                </div>
+                
+                <div class="instruction-box">
+                    <div class="instruction-item">
+                        <div class="icon">📍</div>
+                        <div class="instruction-text">
+                            <strong>איפה בודקים?</strong>
+                            ${item.location}
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="icon">🖐️</div>
+                        <div class="instruction-text">
+                            <strong>מה עושים?</strong>
+                            ${item.action}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="buttons-row">
                 <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">
-                    <div>✅ תקין</div>
+                    <span>✅ תקין</span>
+                    <small style="font-size:10px; font-weight:normal; opacity:0.8;">נראה טוב</small>
                 </button>
                 <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">
-                    <div>❌ תקלה</div>
+                    <span>❌ תקלה</span>
+                    <small style="font-size:10px; font-weight:normal; opacity:0.8;">דווח ליקוי</small>
                 </button>
             </div>
         </div>
