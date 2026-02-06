@@ -20,7 +20,7 @@
         
         <div class="plate-box">
             <div class="plate-inner">
-                <input id="plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8">
+                <input id="license-plate" class="plate-input" type="tel" placeholder="12345678" maxlength="8">
             </div>
         </div>
         
@@ -47,7 +47,9 @@
         <div class="field-group">
             <label>3. שנה</label>
             <div id="year-trigger" class="selector-trigger disabled"><span>בחר שנה...</span> <span>▼</span></div>
-            <div id="year-popup" class="popup-grid"><div id="year-grid" class="grid-layout"></div></div>
+            <div id="year-popup" class="popup-grid">
+                <div id="year-grid" class="grid-layout"></div>
+            </div>
             <input type="hidden" id="val-y">
         </div>
 
@@ -71,13 +73,12 @@
             <input type="hidden" id="val-t">
         </div>
 
-
         <button id="btn-ai" class="btn-main" disabled>🚀 נתח ב-AI</button>
         
-        <div id="ai-panel" class="ai-feedback-box" style="display: none;">
-            <div class="ai-header">🤖 חוות דעת:</div>
+        <div id="ai-panel" class="task-card" style="display: none; margin-top: 20px; border: 1px solid var(--accent);">
+            <div class="ai-header" style="font-weight: 800; color: var(--accent); margin-bottom: 10px;">🤖 חוות דעת AI:</div>
             <div id="ai-content"></div>
-            <button id="btn-continue-ai" class="btn-main success" style="margin-top:15px;">התחל בדיקה 🏁</button>
+            <button id="btn-continue-ai" class="btn-main" style="margin-top:15px; background: var(--success);">המשך לבדיקת שטח 🏁</button>
         </div>
 
         <button id="btn-skip" class="btn-outline">📋 דלג ישר לבדיקה</button>
@@ -96,11 +97,16 @@
         </header>
         
         <div id="final-gauge" class="final-gauge">0</div>
-        <h2 id="result-status" style="text-align:center;"></h2>
+        <h2 id="result-status" style="text-align:center; margin-bottom: 20px;"></h2>
         
-        <div id="defects-container" class="defects-list" style="display:none;">
+        <div id="defects-container" class="task-card" style="display:none; background: rgba(239, 68, 68, 0.05);">
             <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ רשימת ריג'קטים:</h3>
-            <ul id="defects-ul"></ul>
+            <ul id="defects-ul" style="list-style: none; padding: 0;"></ul>
+            
+            <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px; font-weight:900; font-size:20px; display:flex; justify-content:space-between;">
+                <span>סה"כ ליישור קו:</span>
+                <span id="total-cost-display" style="color:var(--danger)">₪0</span>
+            </div>
         </div>
         
         <button id="btn-share" class="btn-main">📍 נווט למכון בדיקה</button>
