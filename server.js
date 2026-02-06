@@ -19,32 +19,51 @@ const API_KEY = process.env.GEMINI_API_KEY;
 
 // פונקציה לתקשורת עם גוגל ג'מיני
 async function askGemini(prompt) {
-    if (!API_KEY) {
-        throw new Error("Missing GEMINI_API_KEY in .env file");
-    }
-    
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-    
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
+    if (!API_KEY) throw new Error("Missing GEMINI_API_KEY");
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-    return data.candidates[0].content.parts[0].text;
-}
+    // רשימת האפשרויות לניסיון (הכתובות והמודלים הכי נפוצים)
+    const configs = [
+        { ver: 'v1', model: 'gemini-1.5-flash' },
+        { ver: 'v1beta', model: 'gemini-1.5-flash' },
+        { ver: 'v1', model: 'gemini-1.5-flash-latest' },
+        { ver: 'v1beta', model: 'gemini-1.5-flash-latest' },
+        { ver: 'v1', model: 'gemini-1.5-pro' }
+    ];
 
-// פונקציית עזר לניקוי ה-JSON שחוזר מה-AI
-function cleanJSON(text) {
-    try {
-        // מנסה למצוא את ה-JSON בתוך הטקסט (למקרה שה-AI הוסיף מילים מסביב)
-        const match = text.match(/\{[\s\S]*\}/);
-        return match ? JSON.parse(match[0]) : null;
-    } catch (e) {
-        return null;
+    let lastError = null;
+
+    // לולאה שמנסה כל קונפיגורציה עד שאחת מצליחה
+    for (const config of configs) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/${config.ver}/models/${config.model}:generateContent?key=${API_KEY}`;
+            
+            console.log(`📡 מנסה חיבור: ${config.ver} עם מודל ${config.model}...`);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.candidates && data.candidates[0].content) {
+                console.log(`✅ הצלחה! מודל עובד: ${config.model} (גרסה ${config.ver})`);
+                return data.candidates[0].content.parts[0].text;
+            } else {
+                console.warn(`⚠️ נכשלו ב-${config.model}: ${data.error?.message || 'שגיאה לא ידועה'}`);
+                lastError = data.error?.message || "Unknown API Error";
+            }
+        } catch (err) {
+            console.error(`❌ שגיאת רשת בניסיון ${config.model}:`, err.message);
+            lastError = err.message;
+        }
     }
+
+    // אם הגענו לכאן, אף אחד לא עבד
+    throw new Error(`כל ניסיונות החיבור ל-AI נכשלו. שגיאה אחרונה: ${lastError}`);
 }
 
 // === הנתיב הראשי לניתוח רכב ===
@@ -113,3 +132,4 @@ app.get('/', (req, res) => {
 // הפעלת השרת
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
