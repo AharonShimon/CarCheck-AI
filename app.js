@@ -8,7 +8,7 @@ let score = 100;
 let totalCost = 0;
 let defects = [];
 
-// משתנים לסליידר (טינדר)
+// משתנים לסליידר (Tinder Mode)
 let flatChecklist = [];
 let currentTaskIndex = 0;
 
@@ -25,7 +25,7 @@ function setupListeners() {
         }
     });
 
-    // 2. חיפוש חופשי - עובד ליצרן, דגם, מנוע וגימור
+    // 2. חיפוש חופשי
     ['brand', 'model', 'engine', 'trim'].forEach(type => {
         const searchInput = document.getElementById(`${type}-search`);
         if (searchInput) {
@@ -69,7 +69,6 @@ function openPicker(type) {
     const trigger = document.getElementById(`${type}-trigger`);
     if (!trigger || trigger.classList.contains('disabled')) return;
     
-    // סגירת פופאפים פתוחים
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
     
     const popup = document.getElementById(`${type}-popup`);
@@ -78,25 +77,14 @@ function openPicker(type) {
     const grid = document.getElementById(`${type}-grid`);
     if (!grid) return;
 
-    // ניקוי ומילוי מחדש כדי להבטיח נתונים מעודכנים
     grid.innerHTML = '';
     let items = [];
 
-    if (type === 'brand') {
-        items = Object.keys(CAR_DATA).sort();
-    } 
-    else if (type === 'model') {
-        items = CAR_DATA[selection.brand]?.models || [];
-    } 
-    else if (type === 'year') {
-        for(let y = 2026; y >= 2008; y--) items.push(y.toString());
-    } 
-    else if (type === 'engine') {
-        items = currentEngines;
-    } 
-    else if (type === 'trim') {
-        items = currentTrims;
-    }
+    if (type === 'brand') items = Object.keys(CAR_DATA).sort();
+    else if (type === 'model') items = CAR_DATA[selection.brand]?.models || [];
+    else if (type === 'year') for(let y = 2026; y >= 2008; y--) items.push(y.toString());
+    else if (type === 'engine') items = currentEngines;
+    else if (type === 'trim') items = currentTrims;
 
     if (items.length === 0) {
         grid.innerHTML = '<div style="color:var(--text-muted); grid-column:span 2; padding:20px; text-align:center;">טוען נתונים...</div>';
@@ -117,23 +105,15 @@ function openPicker(type) {
 
 function selectValue(type, val) {
     selection[type] = val;
-    
-    // עדכון שדה נסתר
-    const hiddenInput = document.getElementById(`val-${type.charAt(0)}`);
-    if (hiddenInput) hiddenInput.value = val;
-    
-    // עדכון טקסט הכפתור
     const trigger = document.getElementById(`${type}-trigger`);
     if (trigger) {
         const span = trigger.querySelector('span');
         if (span) span.innerText = val;
     }
     
-    // סגירת הפופאפ
     const popup = document.getElementById(`${type}-popup`);
     if (popup) popup.classList.remove('active');
 
-    // --- שרשרת הניקוי והפתיחה (Cascade) ---
     if (type === 'brand') { 
         resetField('model'); resetField('year'); resetField('engine'); resetField('trim'); 
         enableField('model'); 
@@ -149,7 +129,6 @@ function selectValue(type, val) {
             currentEngines = brandData.engines || [];
             currentTrims = brandData.trims || [];
             enableField('engine'); 
-            // פתיחה אוטומטית של השלב הבא
             setTimeout(() => openPicker('engine'), 100);
         }
     }
@@ -158,7 +137,6 @@ function selectValue(type, val) {
         enableField('trim'); 
         setTimeout(() => openPicker('trim'), 100);
     }
-    
     checkForm();
 }
 
@@ -169,18 +147,12 @@ function enableField(id) {
 
 function resetField(id) {
     selection[id] = '';
-    const hidden = document.getElementById(`val-${id.charAt(0)}`);
-    if (hidden) hidden.value = '';
-    
     const trigger = document.getElementById(`${id}-trigger`);
     if (trigger) {
         trigger.classList.add('disabled');
         const span = trigger.querySelector('span');
         if (span) span.innerText = id === 'engine' ? '🔌 בחר מנוע...' : id === 'trim' ? '✨ בחר גימור...' : 'בחר...';
     }
-    
-    const grid = document.getElementById(`${id}-grid`);
-    if (grid) grid.innerHTML = '';
 }
 
 function filterGrid(type, query) {
@@ -198,11 +170,9 @@ function checkForm() {
     if (btnAi) btnAi.disabled = !ready;
 }
 
-// --- AI Logic ---
 async function startAnalysis() {
     const loader = document.getElementById('loader');
     const btnAi = document.getElementById('btn-ai');
-    
     if (loader) loader.style.display = 'flex';
     if (btnAi) btnAi.disabled = true;
 
@@ -213,12 +183,7 @@ async function startAnalysis() {
             body: JSON.stringify({ ...selection, userNotes: "" })
         });
         const data = await res.json();
-        
-        if(data.success) {
-            renderAI(data.aiAnalysis); // תוקן מ-AI ל-renderAI כדי להתאים לשם הפונקציה
-        } else {
-            throw new Error("AI request failed");
-        }
+        if(data.success) renderAI(data.aiAnalysis);
     } catch(e) {
         console.error("AI Error:", e);
         renderAI({
@@ -237,7 +202,6 @@ function renderAI(ai) {
     const panel = document.getElementById('ai-panel');
     if (!panel) return;
     panel.style.display = 'block';
-    
     document.getElementById('ai-content').innerHTML = `
         <div style="font-size:40px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score}</div>
         <p style="text-align:center; color:#cbd5e1; line-height:1.5;">${ai.summary}</p>
@@ -249,23 +213,14 @@ function renderAI(ai) {
     panel.scrollIntoView({behavior:'smooth'});
 }
 
-// =========================================================
-// לוגיקת הסליידר (Tinder Mode)
-// =========================================================
-
 function startSliderChecklist() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     window.scrollTo(0,0);
-
-    // הופכים את ה-Config לרשימה אחת שטוחה של משימות
     flatChecklist = [];
     CHECKLIST_CONFIG.forEach(cat => {
-        cat.items.forEach(item => {
-            flatChecklist.push({ ...item, category: cat.category });
-        });
+        cat.items.forEach(item => flatChecklist.push({ ...item, category: cat.category }));
     });
-
     currentTaskIndex = 0;
     renderCard();
 }
@@ -281,8 +236,6 @@ function renderCard() {
 
     const item = flatChecklist[currentTaskIndex];
     const progress = Math.round(((currentTaskIndex + 1) / flatChecklist.length) * 100);
-
-    // פירוק הטקסט לשלבים לפי האייקונים כדי שהיוזר יבין בקלות
     const actionSteps = item.action.split(/(?=🔎|⚠️|🖐️)/g); 
 
     container.innerHTML = `
@@ -293,47 +246,14 @@ function renderCard() {
 
         <div id="active-card" class="task-card slide-in">
             <span class="category-label">${item.category}</span>
-            <h4 style="font-size: 22px; margin: 15px 0;">${item.name}</h4>
-            
-            <div class="instruction-box" style="text-align: right; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px;">
-                <div style="margin-bottom: 15px;">
-                    <strong style="color: var(--accent); display: block; margin-bottom: 5px;">📍 איפה בודקים?</strong>
-                    <span style="font-size: 15px;">${item.location}</span>
-                </div>
-                
-                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                    <strong style="color: var(--accent); display: block; margin-bottom: 8px;">📋 איך בודקים?</strong>
-                    <div style="font-size: 15px; line-height: 1.6;">
-                        ${actionSteps.map(step => `<div style="margin-bottom: 10px;">${step.trim()}</div>`).join('')}
-                    </div>
-                </div>
-            </div>
-
-            <div class="buttons-row">
-                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">
-                    <span>✅ תקין - נראה טוב</span>
-                </button>
-                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">
-                    <span>❌ תקלה - דווח ליקוי</span>
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-container.innerHTML = `
-        <div class="progress-bar-container">
-            <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
-            <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
-        </div>
-        <div id="active-card" class="task-card slide-in">
-            <span class="category-label">${item.category}</span>
             <h4 style="font-size: 20px; margin: 15px 0;">${item.name}</h4>
+            
             <div class="instruction-box" style="text-align: right; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
                 <div style="margin-bottom: 12px;">
                     <strong style="color: var(--accent); display: block; margin-bottom: 4px;">📍 איפה בודקים?</strong>
                     <span style="font-size: 14px;">${item.location}</span>
                 </div>
+                
                 <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
                     <strong style="color: var(--accent); display: block; margin-bottom: 8px;">📋 איך בודקים?</strong>
                     <div style="font-size: 14px; line-height: 1.5;">
@@ -341,9 +261,10 @@ container.innerHTML = `
                     </div>
                 </div>
             </div>
-            <div class="buttons-row">
-                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">✅ תקין</button>
-                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">❌ תקלה</button>
+
+            <div class="buttons-row" style="display: flex; gap: 12px;">
+                <button class="btn-decision btn-good" style="flex: 1;" onclick="window.handleSwipe(true)">✅ תקין</button>
+                <button class="btn-decision btn-bad" style="flex: 1;" onclick="window.handleSwipe(false)">❌ תקלה</button>
             </div>
         </div>
     `;
@@ -357,20 +278,17 @@ window.handleSwipe = (isGood) => {
         card.classList.add('slide-out-right');
     } else {
         card.classList.add('slide-out-left');
-        // חישוב נזק ורישום תקלה
         score -= item.weight;
         totalCost += item.cost;
         defects.push({ name: item.name, cost: item.cost });
     }
 
-    // המתנה לסיום האנימציה וטעינת הכרטיס הבא
     setTimeout(() => {
         currentTaskIndex++;
         renderCard();
     }, 300);
 };
 
-// --- מסך תוצאות סופי ---
 function finishCheck() {
     document.getElementById('screen-check').style.display = 'none';
     document.getElementById('screen-result').style.display = 'block';
@@ -399,7 +317,7 @@ function finishCheck() {
             defects.forEach(d => {
                 ul.innerHTML += `<li style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
                     <span>${d.name}</span>
-                    <span style="color:var(--plate-yellow); font-weight:bold;">₪${d.cost}</span>
+                    <span style="color:var(--plate-yellow); font-weight:bold;">₪${d.cost.toLocaleString()}</span>
                 </li>`;
             });
             ul.innerHTML += `<div style="margin-top:20px; border-top:2px solid var(--card-border); padding-top:15px; font-weight:900; font-size:20px; display:flex; justify-content:space-between;">
