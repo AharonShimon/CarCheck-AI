@@ -1,6 +1,6 @@
 import { CAR_DATA, CHECKLIST_CONFIG } from './config.js';
 
-// --- משתנים גלובליים ---
+// משתנים גלובליים
 let selection = { brand: '', model: '', year: '', engine: '', trim: '' };
 let currentEngines = [];
 let currentTrims = [];
@@ -8,49 +8,60 @@ let score = 100;
 let totalCost = 0;
 let defects = [];
 
-// משתנים ייחודיים לסליידר החדש
+// משתנים לסליידר
 let flatChecklist = [];
 let currentTaskIndex = 0;
 
-// --- אתחול ---
 document.addEventListener('DOMContentLoaded', () => {
     setupListeners();
 });
 
 function setupListeners() {
-    // פתיחת תפריטים
+    // 1. פתיחת תפריטים (Popup)
     ['brand', 'model', 'year', 'engine', 'trim'].forEach(type => {
-        document.getElementById(`${type}-trigger`).addEventListener('click', () => openPicker(type));
-    });
-
-    // חיפוש
-   // חיפוש - עדכנו את הרשימה לכלול גם מנוע וגימור
-    ['brand', 'model', 'engine', 'trim'].forEach(type => {
-        const el = document.getElementById(`${type}-search`);
-        if (el) {
-            el.addEventListener('keyup', (e) => filterGrid(type, e.target.value));
+        const trigger = document.getElementById(`${type}-trigger`);
+        if (trigger) {
+            trigger.addEventListener('click', () => openPicker(type));
         }
     });
 
-    // כפתורים
-    document.getElementById('btn-ai').addEventListener('click', startAnalysis);
-    document.getElementById('btn-skip').addEventListener('click', goToChecklist); // זה מפעיל את הסליידר
-    // אם יש לך כפתור "המשך" בפאנל AI:
-    const btnContinue = document.getElementById('btn-continue');
-    if(btnContinue) btnContinue.addEventListener('click', goToChecklist);
+    // 2. חיפוש חופשי - עכשיו עובד לכל 4 השדות!
+    ['brand', 'model', 'engine', 'trim'].forEach(type => {
+        const searchInput = document.getElementById(`${type}-search`);
+        if (searchInput) {
+            searchInput.addEventListener('keyup', (e) => filterGrid(type, e.target.value));
+        }
+    });
 
-    document.getElementById('btn-finish').addEventListener('click', finishCheck);
+    // 3. כפתורי פעולה
+    const btnAi = document.getElementById('btn-ai');
+    if (btnAi) btnAi.addEventListener('click', startAnalysis);
     
-    // כפתור Waze
-    document.getElementById('btn-share').addEventListener('click', () => {
-        window.open("https://www.waze.com/ul?q=מכון%20בדיקת%20רכב", "_blank");
-    });
+    // כפתור דילוג + כפתור המשך אחרי AI - שניהם מפעילים את הסליידר
+    const btnSkip = document.getElementById('btn-skip');
+    const btnContinueAi = document.getElementById('btn-continue-ai');
+    
+    if (btnSkip) btnSkip.addEventListener('click', startSliderChecklist);
+    if (btnContinueAi) btnContinueAi.addEventListener('click', startSliderChecklist);
 
-    document.getElementById('btn-restart').addEventListener('click', () => {
-        location.reload();
-    });
+    // כפתור סיום (בתוך הסליידר הוא לא קיים, אבל נשאיר ליתר ביטחון)
+    // הפיניש האמיתי קורה אוטומטית כשנגמרים הקלפים
 
-    // סגירת פופאפים
+    // כפתור שיתוף/נווט
+    const btnShare = document.getElementById('btn-share');
+    if (btnShare) {
+        btnShare.addEventListener('click', () => {
+            window.open("https://www.waze.com/ul?q=מכון%20בדיקת%20רכב", "_blank");
+        });
+    }
+    
+    // כפתור התחלה מחדש
+    const btnRestart = document.getElementById('btn-restart');
+    if (btnRestart) {
+        btnRestart.addEventListener('click', () => location.reload());
+    }
+
+    // סגירת פופאפים בלחיצה בחוץ
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.field-group') && !e.target.closest('.popup-grid')) {
             document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
@@ -58,107 +69,144 @@ function setupListeners() {
     });
 }
 
-// --- (כאן שים את כל פונקציות ה-Picker: openPicker, selectValue וכו' - הן לא השתנו) ---
-// ... (אני מדלג עליהן כדי לא להעמיס, תשאיר אותן כמו שהן) ...
-
+// --- לוגיקת בחירת רכב ---
 function openPicker(type) {
     if(document.getElementById(`${type}-trigger`).classList.contains('disabled')) return;
+    
+    // סגירת פופאפים אחרים
     document.querySelectorAll('.popup-grid').forEach(p => p.classList.remove('active'));
     document.getElementById(`${type}-popup`).classList.add('active');
     
     const grid = document.getElementById(`${type}-grid`);
+    
+    // אם כבר יש תוכן (למשל מנועים), לא צריך לטעון מחדש אלא אם זה דינאמי
     if (grid.children.length > 0 && type !== 'engine' && type !== 'trim') return;
     
     grid.innerHTML = '';
     let items = [];
 
+    // שליפת הנתונים הנכונים
     if (type === 'brand') items = Object.keys(CAR_DATA).sort();
     else if (type === 'model') items = CAR_DATA[selection.brand]?.models || [];
     else if (type === 'year') for(let y=2026; y>=2008; y--) items.push(y);
     else if (type === 'engine') items = currentEngines;
     else if (type === 'trim') items = currentTrims;
 
-    items.forEach(val => createItem(grid, val, type));
+    // יצירת הכפתורים בגריד
+    items.forEach(val => {
+        const d = document.createElement('div');
+        d.className = 'grid-item';
+        d.innerText = val;
+        d.onclick = (e) => { 
+            e.stopPropagation(); 
+            selectValue(type, val); 
+        };
+        grid.appendChild(d);
+    });
 }
 
-function createItem(grid, val, type) {
-    const d = document.createElement('div');
-    d.className = 'grid-item';
-    d.innerText = val;
-    d.onclick = (e) => { e.stopPropagation(); selectValue(type, val); };
-    grid.appendChild(d);
-}
-
-async function selectValue(type, val) {
+function selectValue(type, val) {
+    // עדכון המשתנה והתצוגה
     selection[type] = val;
     document.getElementById(`val-${type.charAt(0)}`).value = val;
-    document.getElementById(`${type}-trigger`).querySelector('span').innerText = val;
+    
+    const triggerSpan = document.getElementById(`${type}-trigger`).querySelector('span');
+    if(triggerSpan) triggerSpan.innerText = val;
+    
     document.getElementById(`${type}-popup`).classList.remove('active');
 
+    // שרשרת התלות (יצרן -> דגם -> שנה...)
     if(type === 'brand') { 
-        selection.model=''; selection.year=''; selection.engine=''; selection.trim='';
         reset('model'); reset('year'); reset('engine'); reset('trim'); 
         enable('model'); 
     }
-    else if(type === 'model') { reset('year'); reset('engine'); reset('trim'); enable('year'); }
+    else if(type === 'model') { 
+        reset('year'); reset('engine'); reset('trim'); 
+        enable('year'); 
+    }
     else if(type === 'year') { 
         reset('engine'); reset('trim');
+        // טעינת מנועים וגימורים מהדאטה
         const data = CAR_DATA[selection.brand];
         currentEngines = data.engines || [];
         currentTrims = data.trims || [];
         enable('engine'); 
-        openPicker('engine');
+        openPicker('engine'); // פתיחה אוטומטית לנוחות
     }
-    else if(type === 'engine') { reset('trim'); enable('trim'); openPicker('trim'); }
+    else if(type === 'engine') { 
+        reset('trim'); 
+        enable('trim'); 
+        openPicker('trim'); 
+    }
     
     checkForm();
 }
 
-function enable(id) { document.getElementById(`${id}-trigger`).classList.remove('disabled'); }
+function enable(id) { 
+    document.getElementById(`${id}-trigger`).classList.remove('disabled'); 
+}
+
 function reset(id) { 
-    document.getElementById(`${id}-trigger`).classList.add('disabled'); 
-    document.getElementById(`${id}-trigger`).querySelector('span').innerText = 'בחר...';
+    selection[id] = '';
+    const el = document.getElementById(`${id}-trigger`);
+    el.classList.add('disabled'); 
+    el.querySelector('span').innerText = 'בחר...';
 }
 
 function filterGrid(type, query) {
-    const items = document.getElementById(`${type}-grid`).children;
-    for (let item of items) item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none';
+    const grid = document.getElementById(`${type}-grid`);
+    const items = grid.children;
+    for (let item of items) {
+        item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'block' : 'none';
+    }
 }
 
 function checkForm() {
     const ready = Object.values(selection).every(v => v !== '');
+    // שחרור כפתור ה-AI רק כשהכל מלא
     document.getElementById('btn-ai').disabled = !ready;
 }
 
-// --- AI (נשאר אותו דבר) ---
+// --- AI Logic ---
 async function startAnalysis() {
-    const userNotes = document.getElementById('user-notes').value;
-    document.getElementById('loader').style.display = 'flex';
-    document.getElementById('btn-ai').disabled = true;
+    const loader = document.getElementById('loader');
+    const btnAi = document.getElementById('btn-ai');
+    
+    loader.style.display = 'flex';
+    btnAi.disabled = true;
 
     try {
         const res = await fetch('/analyze-ai', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ ...selection, userNotes })
+            body: JSON.stringify({ ...selection, userNotes: "" }) // אין הערות ב-HTML הזה
         });
         const data = await res.json();
-        if(data.success) renderAI(data.aiAnalysis);
+        
+        if(data.success) {
+            renderAI(data.aiAnalysis);
+        } else {
+            throw new Error("No success flag");
+        }
     } catch(e) {
+        console.error(e);
+        // Fallback למקרה של תקלה
         renderAI({
-            reliability_score: 80,
-            summary: "לא הצלחנו להתחבר לשרת, אך הרכב נחשב אמין. המשך לבדיקה.",
-            pros: ["רכב פופולרי"],
+            reliability_score: 85,
+            summary: "לא ניתן להתחבר לשרת כרגע. הדגם נחשב אמין באופן כללי.",
+            pros: ["רכב פופולרי", "חלפים זמינים"],
             common_faults: ["בלאי טבעי"]
         });
     } finally {
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('btn-ai').disabled = false;
+        loader.style.display = 'none';
+        btnAi.disabled = false;
     }
 }
 
 function renderAI(ai) {
-    document.getElementById('ai-panel').style.display = 'block';
+    const panel = document.getElementById('ai-panel');
+    panel.style.display = 'block';
+    
     document.getElementById('ai-content').innerHTML = `
         <div style="font-size:40px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score}</div>
         <p style="text-align:center; color:#cbd5e1;">${ai.summary}</p>
@@ -167,22 +215,20 @@ function renderAI(ai) {
             <strong style="color:var(--danger)">❌ תקלות:</strong> ${ai.common_faults.join(', ')}
         </div>
     `;
-    document.getElementById('ai-panel').scrollIntoView({behavior:'smooth'});
-    // וודא שכפתור ההמשך מחובר לפונקציה החדשה
-    document.getElementById('btn-continue').onclick = goToChecklist; 
+    panel.scrollIntoView({behavior:'smooth'});
 }
 
 
-// ============================================================
-// כאן נמצא הקוד החדש של הסליידר (במקום הלוגיקה הישנה)
-// ============================================================
+// =========================================================
+// לוגיקת הסליידר (טינדר לרכבים)
+// =========================================================
 
-function goToChecklist() {
+function startSliderChecklist() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     window.scrollTo(0,0);
-    
-    // 1. הופכים את הקטגוריות לרשימה שטוחה אחת ארוכה
+
+    // הופכים את הקטגוריות לרשימה שטוחה
     flatChecklist = [];
     CHECKLIST_CONFIG.forEach(cat => {
         cat.items.forEach(item => {
@@ -190,16 +236,15 @@ function goToChecklist() {
         });
     });
 
-    // מתחילים מהקלף הראשון
     currentTaskIndex = 0;
-    renderCurrentTask();
+    renderCard();
 }
 
-function renderCurrentTask() {
+function renderCard() {
     const container = document.getElementById('checklist-content');
-    container.innerHTML = ''; // מנקה את הקלף הקודם
+    container.innerHTML = ''; // ניקוי
 
-    // אם סיימנו את כל הקלפים
+    // אם סיימנו את כל הכרטיסים -> מסך תוצאות
     if (currentTaskIndex >= flatChecklist.length) {
         finishCheck();
         return;
@@ -208,15 +253,16 @@ function renderCurrentTask() {
     const item = flatChecklist[currentTaskIndex];
     const progress = Math.round(((currentTaskIndex + 1) / flatChecklist.length) * 100);
 
-    // יצירת ה-HTML של הקלף הבודד
-    const cardHTML = `
+    // יצירת ה-HTML של הכרטיס
+    const html = `
         <div class="progress-bar-container">
             <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
             <div class="progress-bar"><div class="fill" style="width:${progress}%"></div></div>
         </div>
 
         <div id="active-card" class="task-card slide-in-animation">
-            <div class="category-label" style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:12px; margin-bottom:5px;">${item.category}</div>
+            <div class="category-label" style="background:rgba(255,255,255,0.1); align-self:flex-start; padding:4px 8px; border-radius:4px; font-size:12px; margin-bottom:10px;">${item.category}</div>
+            
             <div class="task-header">
                 <h4 class="task-title" style="font-size:22px; margin-top:5px;">${item.name}</h4>
             </div>
@@ -237,29 +283,29 @@ function renderCurrentTask() {
         </div>
     `;
 
-    container.innerHTML = cardHTML;
+    container.innerHTML = html;
 }
 
-// הפונקציה שמטפלת בהחלקה (במקום handleDecision הישנה)
+// פונקציית ההחלקה (חובה להצמיד ל-window)
 window.handleSwipe = (isGood) => {
     const card = document.getElementById('active-card');
     const item = flatChecklist[currentTaskIndex];
 
-    // 1. אנימציית יציאה
     if (isGood) {
-        card.classList.add('slide-out-right'); // עף ימינה (חיובי)
+        card.classList.add('slide-out-right'); // אנימציה ימינה
     } else {
-        card.classList.add('slide-out-left'); // עף שמאלה (שלילי)
+        card.classList.add('slide-out-left'); // אנימציה שמאלה
+        
         // חישוב נזק
         score -= item.weight;
         totalCost += item.cost;
         defects.push({ name: item.name, cost: item.cost });
     }
 
-    // 2. המתנה קצרה לאנימציה ואז טעינת הקלף הבא
+    // המתנה לאנימציה ואז טעינת הבא
     setTimeout(() => {
         currentTaskIndex++;
-        renderCurrentTask();
+        renderCard();
     }, 300);
 };
 
@@ -267,27 +313,34 @@ window.handleSwipe = (isGood) => {
 function finishCheck() {
     document.getElementById('screen-check').style.display = 'none';
     document.getElementById('screen-result').style.display = 'block';
-    
+
     const final = Math.max(0, score);
     const gauge = document.getElementById('final-gauge');
     gauge.innerText = final;
     
+    // צבע הציון
     let color = final > 85 ? "var(--success)" : (final > 65 ? "var(--plate-yellow)" : "var(--danger)");
-    gauge.style.color = color; gauge.style.borderColor = color;
-    document.getElementById('result-status').innerText = final > 85 ? "רכב במצב טוב! ✅" : "יש ליקויים משמעותיים ⚠️";
+    gauge.style.color = color; 
+    gauge.style.borderColor = color;
+    
+    // סטטוס מילולי
+    document.getElementById('result-status').innerText = final > 85 ? "רכב במצב טוב! ✅" : "יש ליקויים ⚠️";
 
+    // רשימת תקלות
+    const container = document.getElementById('defects-container');
     const ul = document.getElementById('defects-ul');
     ul.innerHTML = '';
     
     if(defects.length > 0) {
-        document.getElementById('defects-container').style.display = 'block';
+        container.style.display = 'block';
         defects.forEach(d => {
-            ul.innerHTML += `<li>${d.name} <span style="float:left; color:#facc15;">₪${d.cost}</span></li>`;
+            ul.innerHTML += `<li>${d.name} <span style="float:left; color:#facc15">₪${d.cost}</span></li>`;
         });
+        // שורת סיכום
         ul.innerHTML += `<div style="margin-top:15px; border-top:1px solid #555; padding-top:10px; font-weight:bold; font-size:18px;">
-            סה"כ תיקונים: <span style="float:left; color:#ef4444;">₪${totalCost.toLocaleString()}</span>
+            סה"כ יישור קו: <span style="float:left; color:#ef4444">₪${totalCost.toLocaleString()}</span>
         </div>`;
     } else {
-        document.getElementById('defects-container').style.display = 'none';
+        container.style.display = 'none';
     }
 }
