@@ -1,135 +1,98 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// הגדרת נתיבים (נדרש בגלל שימוש ב-import)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 
-// הגדרות שרת
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // מגיש את קבצים הסטטיים (HTML/CSS/JS)
+app.use(express.static(path.join(__dirname)));
 
+// הגדרת המפתח
 const API_KEY = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(API_KEY);
 
-// פונקציה לתקשורת עם גוגל ג'מיני
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// --- פונקציית ה-"שורד" לחיבור ל-AI ---
 async function askGemini(prompt) {
-    if (!API_KEY) throw new Error("Missing GEMINI_API_KEY");
-
-    // רשימת האפשרויות לניסיון (הכתובות והמודלים הכי נפוצים)
-    const configs = [
-        { ver: 'v1', model: 'gemini-1.5-flash' },
-        { ver: 'v1beta', model: 'gemini-1.5-flash' },
-        { ver: 'v1', model: 'gemini-1.5-flash-latest' },
-        { ver: 'v1beta', model: 'gemini-1.5-flash-latest' },
-        { ver: 'v1', model: 'gemini-1.5-pro' }
+    // רשימת מודלים לניסיון בסדר עדיפות - כולל ה-2.5 שעבד לך
+    const modelsToTry = [
+        "gemini-2.5-flash", 
+        "gemini-1.5-flash", 
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro"
     ];
 
     let lastError = null;
 
-    // לולאה שמנסה כל קונפיגורציה עד שאחת מצליחה
-    for (const config of configs) {
+    for (const modelName of modelsToTry) {
         try {
-            const url = `https://generativelanguage.googleapis.com/${config.ver}/models/${config.model}:generateContent?key=${API_KEY}`;
+            console.log(`📡 מנסה חיבור עם המודל: ${modelName}...`);
+            const model = genAI.getGenerativeModel({ model: modelName });
             
-            console.log(`📡 מנסה חיבור: ${config.ver} עם מודל ${config.model}...`);
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.candidates && data.candidates[0].content) {
-                console.log(`✅ הצלחה! מודל עובד: ${config.model} (גרסה ${config.ver})`);
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                console.warn(`⚠️ נכשלו ב-${config.model}: ${data.error?.message || 'שגיאה לא ידועה'}`);
-                lastError = data.error?.message || "Unknown API Error";
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            let text = response.text();
+            
+            if (text) {
+                console.log(`✅ הצלחה עם מודל: ${modelName}`);
+                return text;
             }
         } catch (err) {
-            console.error(`❌ שגיאת רשת בניסיון ${config.model}:`, err.message);
+            console.warn(`⚠️ מודל ${modelName} לא הגיב: ${err.message}`);
             lastError = err.message;
         }
     }
-
-    // אם הגענו לכאן, אף אחד לא עבד
-    throw new Error(`כל ניסיונות החיבור ל-AI נכשלו. שגיאה אחרונה: ${lastError}`);
+    throw new Error(lastError);
 }
 
-// === הנתיב הראשי לניתוח רכב ===
 app.post('/analyze-ai', async (req, res) => {
+    console.log(`🚀 בקשה לניתוח: ${req.body.brand} ${req.body.model} (${req.body.year})`);
+
+    if (!API_KEY) {
+        return res.status(500).json({ error: "Missing API Key" });
+    }
+
     try {
-        // קבלת הנתונים מהלקוח
-        // userNotes עשוי להיות ריק כי הסרנו את השדה, וזה בסדר
-        const { brand, model, year, engine, trim, userNotes } = req.body;
-        
-        console.log(`🤖 AI Request: ${brand} ${model} (${year})`);
+        const { brand, model, year } = req.body;
 
-        // בניית הפרומפט למוסכניק הווירטואלי
-        const prompt = `
-        Act as a senior Israeli car mechanic and expert buyer consultant.
-        
-        Vehicle Details:
-        - Car: ${brand} ${model}
-        - Year: ${year}
-        - Engine: ${engine}
-        - Trim: ${trim}
-        - User Notes: "${userNotes || "No specific issues reported"}"
+        const smartPrompt = `
+        Act as a senior vehicle inspector in Israel. 
+        Analyze the reliability of: "${brand} ${model} year ${year}".
 
-        Task:
-        Analyze the reliability of this specific car model in the Israeli market context.
-        Since there are no specific user notes, base your score on the general reputation, known chronic issues (machalot), and maintenance costs for this specific year and engine.
+        CRITICAL INSTRUCTIONS:
+        1. Consider ALL common engine variants sold in Israel for this model year.
+        2. Identify "chronic diseases" specific to these engines/transmissions.
+        3. Provide specific Pros (יתרונות) AND Cons (חסרונות).
 
-        Output MUST be valid JSON only (Hebrew language):
+        Return ONLY valid JSON in this format (Hebrew):
         {
-            "reliability_score": (Number 0-100, be realistic based on model year),
-            "summary": "Short paragraph in Hebrew. Direct and professional bottom line.",
-            "pros": ["Pro 1", "Pro 2"],
-            "common_faults": ["Fault 1", "Fault 2"]
-        }
-        `;
+            "reliability_score": (Integer 0-100), 
+            "summary": (A harsh and honest summary in Hebrew, max 20 words), 
+            "common_faults": ["תקלה 1", "תקלה 2"], 
+            "pros": ["יתרון 1"],
+            "cons": ["חיסרון 1"]
+        }`;
 
-        // שליחה ל-AI
-        const rawText = await askGemini(prompt);
-        const analysis = cleanJSON(rawText);
-
-        if (!analysis) throw new Error("Failed to parse AI response");
-
-        // החזרת תשובה ללקוח
-        res.json({ success: true, aiAnalysis: analysis });
-
-    } catch (e) {
-        console.error("AI Error:", e.message);
+        const rawResponse = await askGemini(smartPrompt);
         
-        // תשובת ברירת מחדל למקרה של שגיאה (כדי שהאפליקציה לא תיתקע)
-        res.json({ 
-            success: true, 
-            aiAnalysis: {
-                reliability_score: 80,
-                summary: "לא ניתן להתחבר לשרת כרגע. באופן כללי, הקפד לבדוק היסטוריית טיפולים.",
-                pros: ["רכב פופולרי"],
-                common_faults: ["בלאי טבעי"]
-            } 
+        // ניקוי תגיות Markdown של JSON אם קיימות
+        const cleanJson = rawResponse.replace(/```json|```/g, '').trim();
+        
+        res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
+
+    } catch (error) {
+        console.error("❌ שגיאה סופית בשרת:", error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: "כל המודלים נכשלו", 
+            details: error.message 
         });
     }
 });
 
-// נתיב ברירת מחדל (למקרה שגולשים ישירות לכתובת)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// הפעלת השרת
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
