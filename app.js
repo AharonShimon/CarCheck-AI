@@ -321,30 +321,31 @@ function renderCard() {
     `;
 }
 
-    container.innerHTML = `
+container.innerHTML = `
+        <div class="progress-bar-container">
+            <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
+            <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
+        </div>
         <div id="active-card" class="task-card slide-in">
-            <div>
-                <span class="category-label">${item.category}</span>
-                <h4>${item.name}</h4>
-                
-                <div class="instruction-box">
-                    <div class="instruction-item">
-                        <div class="icon">📍</div>
-                        <div class="instruction-text"><strong>איפה?</strong> ${item.location}</div>
-                    </div>
-                    
-                    <div class="instruction-item">
-                        <div class="icon">📋</div>
-                        <div class="instruction-text">
-                            <strong>צעדי בדיקה:</strong>
-                            <ul style="margin:5px 0; padding-right:15px; font-size:14px; color:#e2e8f0;">
-                                ${actionSteps.map(step => `<li style="margin-bottom:8px;">${step.trim()}</li>`).join('')}
-                            </ul>
-                        </div>
+            <span class="category-label">${item.category}</span>
+            <h4 style="font-size: 20px; margin: 15px 0;">${item.name}</h4>
+            <div class="instruction-box" style="text-align: right; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: var(--accent); display: block; margin-bottom: 4px;">📍 איפה בודקים?</strong>
+                    <span style="font-size: 14px;">${item.location}</span>
+                </div>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                    <strong style="color: var(--accent); display: block; margin-bottom: 8px;">📋 איך בודקים?</strong>
+                    <div style="font-size: 14px; line-height: 1.5;">
+                        ${actionSteps.map(step => `<div style="margin-bottom: 8px;">${step.trim()}</div>`).join('')}
                     </div>
                 </div>
             </div>
+            <div class="buttons-row">
+                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">✅ תקין</button>
+                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">❌ תקלה</button>
             </div>
+        </div>
     `;
 }
 
