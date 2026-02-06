@@ -273,8 +273,7 @@ function startSliderChecklist() {
 function renderCard() {
     const container = document.getElementById('checklist-content');
     if (!container) return;
-    container.innerHTML = ''; 
-
+    
     if (currentTaskIndex >= flatChecklist.length) {
         finishCheck();
         return;
@@ -283,49 +282,44 @@ function renderCard() {
     const item = flatChecklist[currentTaskIndex];
     const progress = Math.round(((currentTaskIndex + 1) / flatChecklist.length) * 100);
 
-    const html = `
+    // פירוק הטקסט לשלבים לפי האייקונים כדי שהיוזר יבין בקלות
+    const actionSteps = item.action.split(/(?=🔎|⚠️|🖐️)/g); 
+
+    container.innerHTML = `
         <div class="progress-bar-container">
             <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
             <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
         </div>
 
         <div id="active-card" class="task-card slide-in">
-            <div>
-                <span class="category-label">${item.category}</span>
-                <div class="task-header">
-                    <h4>${item.name}</h4>
+            <span class="category-label">${item.category}</span>
+            <h4 style="font-size: 22px; margin: 15px 0;">${item.name}</h4>
+            
+            <div class="instruction-box" style="text-align: right; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px;">
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: var(--accent); display: block; margin-bottom: 5px;">📍 איפה בודקים?</strong>
+                    <span style="font-size: 15px;">${item.location}</span>
                 </div>
                 
-                <div class="instruction-box">
-                    <div class="instruction-item">
-                        <div class="icon">📍</div>
-                        <div class="instruction-text">
-                            <strong>איפה בודקים?</strong>
-                            ${item.location}
-                        </div>
-                    </div>
-                    <div class="instruction-item">
-                        <div class="icon">🖐️</div>
-                        <div class="instruction-text">
-                            <strong>מה עושים?</strong>
-                            ${item.action}
-                        </div>
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <strong style="color: var(--accent); display: block; margin-bottom: 8px;">📋 איך בודקים?</strong>
+                    <div style="font-size: 15px; line-height: 1.6;">
+                        ${actionSteps.map(step => `<div style="margin-bottom: 10px;">${step.trim()}</div>`).join('')}
                     </div>
                 </div>
             </div>
 
             <div class="buttons-row">
                 <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">
-                    <span>✅ תקין</span>
-                    <small style="font-size:10px; font-weight:normal; opacity:0.8;">נראה טוב</small>
+                    <span>✅ תקין - נראה טוב</span>
                 </button>
                 <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">
-                    <span>❌ תקלה</span>
-                    <small style="font-size:10px; font-weight:normal; opacity:0.8;">דווח ליקוי</small>
+                    <span>❌ תקלה - דווח ליקוי</span>
                 </button>
             </div>
         </div>
     `;
+}
 
     container.innerHTML = `
         <div id="active-card" class="task-card slide-in">
