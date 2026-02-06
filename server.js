@@ -1,24 +1,27 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
+
+// פתרון ל-__dirname בפורמט ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// הגדרת המפתח
 const API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// --- פונקציית ה-"שורד" לחיבור ל-AI ---
+// פונקציית ה-"שורד" המעודכנת
 async function askGemini(prompt) {
-    // רשימת מודלים לניסיון בסדר עדיפות - כולל ה-2.5 שעבד לך
     const modelsToTry = [
         "gemini-2.5-flash", 
         "gemini-1.5-flash", 
@@ -42,7 +45,7 @@ async function askGemini(prompt) {
                 return text;
             }
         } catch (err) {
-            console.warn(`⚠️ מודל ${modelName} לא הגיב: ${err.message}`);
+            console.warn(`⚠️ מודל ${modelName} נכשל: ${err.message}`);
             lastError = err.message;
         }
     }
@@ -62,37 +65,18 @@ app.post('/analyze-ai', async (req, res) => {
         const smartPrompt = `
         Act as a senior vehicle inspector in Israel. 
         Analyze the reliability of: "${brand} ${model} year ${year}".
-
-        CRITICAL INSTRUCTIONS:
-        1. Consider ALL common engine variants sold in Israel for this model year.
-        2. Identify "chronic diseases" specific to these engines/transmissions.
-        3. Provide specific Pros (יתרונות) AND Cons (חסרונות).
-
-        Return ONLY valid JSON in this format (Hebrew):
-        {
-            "reliability_score": (Integer 0-100), 
-            "summary": (A harsh and honest summary in Hebrew, max 20 words), 
-            "common_faults": ["תקלה 1", "תקלה 2"], 
-            "pros": ["יתרון 1"],
-            "cons": ["חיסרון 1"]
-        }`;
+        Return ONLY valid JSON (Hebrew).`;
 
         const rawResponse = await askGemini(smartPrompt);
-        
-        // ניקוי תגיות Markdown של JSON אם קיימות
         const cleanJson = rawResponse.replace(/```json|```/g, '').trim();
         
         res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
 
     } catch (error) {
-        console.error("❌ שגיאה סופית בשרת:", error.message);
-        res.status(500).json({ 
-            success: false, 
-            error: "כל המודלים נכשלו", 
-            details: error.message 
-        });
+        console.error("❌ שגיאה:", error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 המוסכניק רץ בפורט ${PORT}`));
