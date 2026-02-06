@@ -327,7 +327,31 @@ function renderCard() {
         </div>
     `;
 
-    container.innerHTML = html;
+    container.innerHTML = `
+        <div id="active-card" class="task-card slide-in">
+            <div>
+                <span class="category-label">${item.category}</span>
+                <h4>${item.name}</h4>
+                
+                <div class="instruction-box">
+                    <div class="instruction-item">
+                        <div class="icon">📍</div>
+                        <div class="instruction-text"><strong>איפה?</strong> ${item.location}</div>
+                    </div>
+                    
+                    <div class="instruction-item">
+                        <div class="icon">📋</div>
+                        <div class="instruction-text">
+                            <strong>צעדי בדיקה:</strong>
+                            <ul style="margin:5px 0; padding-right:15px; font-size:14px; color:#e2e8f0;">
+                                ${actionSteps.map(step => `<li style="margin-bottom:8px;">${step.trim()}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+    `;
 }
 
 window.handleSwipe = (isGood) => {
