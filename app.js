@@ -106,7 +106,7 @@ function openPicker(type) {
 }
 
 function selectValue(type, val) {
-    // עדכון המשתנה והתצוגה
+    // עדכון המשתנה והתצוגה של השדה שנבחר
     selection[type] = val;
     document.getElementById(`val-${type.charAt(0)}`).value = val;
     
@@ -115,25 +115,38 @@ function selectValue(type, val) {
     
     document.getElementById(`${type}-popup`).classList.remove('active');
 
-    // שרשרת התלות (יצרן -> דגם -> שנה...)
-    if(type === 'brand') { 
-        reset('model'); reset('year'); reset('engine'); reset('trim'); 
+    // === לוגיקת הניקוי והשרשרת ===
+    if (type === 'brand') { 
+        // 1. איפוס כל השדות שמתחת ליצרן
+        reset('model'); 
+        reset('year'); 
+        reset('engine'); 
+        reset('trim'); 
+        
+        // 2. ניקוי פיזי של רשימת הדגמים הישנה מה-HTML
+        document.getElementById('model-grid').innerHTML = ''; 
+        
+        // 3. פתיחת האפשרות לבחור דגם
         enable('model'); 
     }
-    else if(type === 'model') { 
-        reset('year'); reset('engine'); reset('trim'); 
+    else if (type === 'model') { 
+        reset('year'); 
+        reset('engine'); 
+        reset('trim'); 
         enable('year'); 
     }
-    else if(type === 'year') { 
-        reset('engine'); reset('trim');
-        // טעינת מנועים וגימורים מהדאטה
+    else if (type === 'year') { 
+        reset('engine'); 
+        reset('trim');
+        
         const data = CAR_DATA[selection.brand];
         currentEngines = data.engines || [];
         currentTrims = data.trims || [];
+        
         enable('engine'); 
-        openPicker('engine'); // פתיחה אוטומטית לנוחות
+        openPicker('engine');
     }
-    else if(type === 'engine') { 
+    else if (type === 'engine') { 
         reset('trim'); 
         enable('trim'); 
         openPicker('trim'); 
@@ -142,15 +155,25 @@ function selectValue(type, val) {
     checkForm();
 }
 
-function enable(id) { 
-    document.getElementById(`${id}-trigger`).classList.remove('disabled'); 
-}
-
+// פונקציית איפוס משופרת
 function reset(id) { 
-    selection[id] = '';
-    const el = document.getElementById(`${id}-trigger`);
-    el.classList.add('disabled'); 
-    el.querySelector('span').innerText = 'בחר...';
+    // א. איפוס בזיכרון (Object)
+    selection[id] = ''; 
+    
+    // ב. איפוס בשדה הנסתר (Hidden Input)
+    const hiddenInput = document.getElementById(`val-${id.charAt(0)}`);
+    if (hiddenInput) hiddenInput.value = '';
+    
+    // ג. איפוס התצוגה והוספת נעילה
+    const trigger = document.getElementById(`${id}-trigger`);
+    if (trigger) {
+        trigger.classList.add('disabled'); 
+        trigger.querySelector('span').innerText = 'בחר...';
+    }
+
+    // ד. ניקוי הגריד כדי שה-openPicker יטען נתונים חדשים
+    const grid = document.getElementById(`${id}-grid`);
+    if (grid) grid.innerHTML = '';
 }
 
 function filterGrid(type, query) {
