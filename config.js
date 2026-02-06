@@ -1,3 +1,85 @@
+// --- 1. נתוני רכבים לבחירה (CAR_DATA) ---
+export const CAR_DATA = {
+    "מאזדה": {
+        models: ["3", "2", "6", "CX-5", "CX-30", "CX-3"],
+        engines: ["1.5 בנזין", "2.0 בנזין", "2.5 בנזין", "SkyActiv-G"],
+        trims: ["Comfort", "Executive", "Pure White", "Signature", "Black Edition"]
+    },
+    "טויוטה": {
+        models: ["קורולה", "יאריס", "RAV4", "C-HR", "אוריס", "לנד קרוזר"],
+        engines: ["1.5 היברידי", "1.8 היברידי", "2.0 בנזין", "2.5 היברידי", "2.8 דיזל"],
+        trims: ["Sun", "GLI", "Limited", "Excite", "TS", "Select"]
+    },
+    "יונדאי": {
+        models: ["איוניק", "i20", "i30", "טוסון", "קונה", "אלנטרה", "באיון"],
+        engines: ["1.0 טורבו", "1.4 בנזין", "1.6 היברידי", "2.0 בנזין", "חשמלי EV"],
+        trims: ["Premium", "Supreme", "Luxury", "Elite", "Inspire"]
+    },
+    "קיה": {
+        models: ["ספורטאז'", "פיקנטו", "נירו", "סטוניק", "סיד", "סלטוס"],
+        engines: ["1.0 טורבו", "1.2 בנזין", "1.6 היברידי", "2.0 בנזין", "1.6 דיזל"],
+        trims: ["LX", "EX", "Premium", "Urban", "GT-Line"]
+    },
+    "סקודה": {
+        models: ["אוקטביה", "סופרב", "קודיאק", "קארוק", "קאמיק", "פאביה"],
+        engines: ["1.0 TSI", "1.5 TSI", "2.0 TSI", "2.0 TDI"],
+        trims: ["Ambition", "Style", "L&K", "Sportline"]
+    },
+    "פולקסווגן": {
+        models: ["גולף", "טיגואן", "פולו", "פאסאט", "T-Roc"],
+        engines: ["1.0 TSI", "1.5 TSI", "2.0 TSI"],
+        trims: ["Life", "Style", "R-Line", "Comfortline"]
+    },
+    "סובארו": {
+        models: ["XV", "פורסטר", "אאוטבק", "אימפרזה"],
+        engines: ["1.6 בוקסר", "2.0 בוקסר", "2.5 בוקסר"],
+        trims: ["Style", "Premium", "Eyesight", "Sport"]
+    },
+    "פורד": {
+        models: ["קוגה", "פוקוס", "פיאסטה", "אקספלורר"],
+        engines: ["1.0 EcoBoost", "1.5 EcoBoost", "2.0 EcoBoost"],
+        trims: ["Titanium", "ST-Line", "Trend"]
+    },
+    "שברולט": {
+        models: ["אקווינוקס", "ספארק", "טראוורס", "מליבו"],
+        engines: ["1.4 טורבו", "1.5 טורבו", "2.0 טורבו", "3.6 V6"],
+        trims: ["LS", "LT", "Premier", "RS"]
+    },
+    "הונדה": {
+        models: ["סיוויק", "ג'אז", "CR-V", "HR-V"],
+        engines: ["1.3 היברידי", "1.5 טורבו", "1.0 טורבו", "2.0 היברידי"],
+        trims: ["Comfort", "Elegance", "Executive", "Sport"]
+    },
+    "סוזוקי": {
+        models: ["סוויפט", "ויטארה", "קרוסאובר", "איגניס", "ג'ימני"],
+        engines: ["1.2 Dualjet", "1.4 BoosterJet", "1.0 טורבו"],
+        trims: ["GLX", "GLX Plus", "Premium"]
+    },
+    "סיאט": {
+        models: ["איביזה", "לאון", "ארונה", "אטקה"],
+        engines: ["1.0 TSI", "1.5 TSI", "2.0 TSI"],
+        trims: ["Reference", "Style", "FR", "Xcellence"]
+    },
+    "רנו": {
+        models: ["קליאו", "קאפצ'ור", "מגאן", "קאדג'אר"],
+        engines: ["1.0 טורבו", "1.3 טורבו", "1.5 דיזל"],
+        trims: ["Authentic", "Expression", "Iconic", "RS Line"]
+    },
+    "פיג'ו": {
+        models: ["208", "3008", "2008", "5008"],
+        engines: ["1.2 PureTech", "1.5 BlueHDi", "1.6 PureTech"],
+        trims: ["Active", "Allure", "GT", "Premium"]
+    },
+    "ניסאן": {
+        models: ["קשקאי", "ג'וק", "מיקרה", "אקסטרייל"],
+        engines: ["1.3 טורבו", "1.5 דיזל", "e-Power"],
+        trims: ["Acenta", "Tekna", "N-Connecta"]
+    }
+};
+
+// --- 2. רשימת 30 הבדיקות (CHECKLIST_CONFIG) ---
+// כאן תדביק את רשימת ה-CHECKLIST_CONFIG שסידרנו קודם...
+
 export const CHECKLIST_CONFIG = [
     {
         category: "🚨 20 בדיקות קריטיות (מנוע, גיר, שלדה)",
