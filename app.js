@@ -94,7 +94,7 @@ function openPicker(type) {
         d.innerText = val;
         d.onclick = (e) => { 
             e.stopPropagation(); 
-            selectValue(type, val); 
+            (type, val); 
         };
         grid.appendChild(d);
     });
@@ -111,10 +111,11 @@ function selectValue(type, val) {
     const popup = document.getElementById(`${type}-popup`);
     if (popup) popup.classList.remove('active');
 
-    // Cascade (הפעלה מדורגת) - מעודכן לתמיכה בערכים שאינם בדאטה
+    // Cascade - הפעלה מדורגת ללא פתיחה אוטומטית לשדות אופציונליים
     if (type === 'brand') { 
         resetField('model'); resetField('year'); resetField('engine'); resetField('trim'); 
         enableField('model'); 
+        // יצרן ודגם הם חובה - אפשר להשאיר פתיחה אוטומטית כאן אם תרצה
     }
     else if (type === 'model') { 
         resetField('year'); resetField('engine'); resetField('trim'); 
@@ -123,18 +124,16 @@ function selectValue(type, val) {
     else if (type === 'year') { 
         resetField('engine'); resetField('trim');
         const brandData = CAR_DATA[selection.brand];
-        
-        // טוען רשימות אם קיימות, אחרת משאיר ריק להקלדה חופשית
         currentEngines = brandData?.engines || [];
         currentTrims = brandData?.trims || [];
         
         enableField('engine'); 
-        setTimeout(() => openPicker('engine'), 100);
+        // הוסר: setTimeout שמפעיל את openPicker('engine')
     }
     else if (type === 'engine') { 
         resetField('trim'); 
         enableField('trim'); 
-        setTimeout(() => openPicker('trim'), 100);
+        // הוסר: setTimeout שמפעיל את openPicker('trim')
     }
     checkForm();
 }
