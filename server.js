@@ -19,7 +19,14 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 async function askGemini(prompt) {
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
+    // רשימת מודלים מורחבת הכוללת את הדור החדש של 2026
+    const modelsToTry = [
+        "gemini-2.5-flash", 
+        "gemini-2.0-flash", 
+        "gemini-2.0-pro", 
+        "gemini-1.5-flash", 
+        "gemini-1.5-pro"
+    ];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -37,11 +44,15 @@ async function askGemini(prompt) {
             const response = await result.response;
             return response.text();
         } catch (err) {
-            console.warn(`⚠️ מודל ${modelName} נכשל.`);
+            if (err.message.includes("429")) {
+                console.error(`🛑 חריגה ממכסה במודל ${modelName}`);
+                // ממשיך למודל הבא ברשימה במקרה של חריגה ממכסה
+            }
+            console.warn(`⚠️ מודל ${modelName} נכשל: ${err.message}`);
             lastError = err.message;
         }
     }
-    throw new Error(lastError);
+    throw new Error(lastError || "כל המודלים נכשלו בחיבור");
 }
 
 app.post('/analyze-ai', async (req, res) => {
@@ -51,7 +62,7 @@ app.post('/analyze-ai', async (req, res) => {
 
         const modeInstruction = isPrecise 
             ? `STRICT RULE: Focus ONLY on the year ${year}. Mention specific recalls, serial faults, and engine reliability for THIS EXACT YEAR only.`
-            : `STRICT RULE: Provide a GENERAL overview for the ${brand} ${model} across all years.`;
+            : `STRICT RULE: Provide a GENERAL overview for the ${brand} ${model} across all years. Mention that reliability varies between generations.`;
 
         const smartPrompt = `
             Act as a senior vehicle inspector in Israel. 
