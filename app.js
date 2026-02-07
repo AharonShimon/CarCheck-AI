@@ -8,9 +8,10 @@ let score = 100;
 let totalCost = 0;
 let defects = [];
 
-// משתנים לסליידר (Tinder Mode)
+// משתנים לסליידר (Tinder Mode) והיסטוריה לביצוע Undo
 let flatChecklist = [];
 let currentTaskIndex = 0;
+let checkHistory = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
     setupListeners();
@@ -25,7 +26,7 @@ function setupListeners() {
         }
     });
 
-    // 2. חיפוש חופשי (משופר)
+    // 2. חיפוש חופשי וסינון
     ['brand', 'model', 'engine', 'trim'].forEach(type => {
         const searchInput = document.getElementById(`${type}-search`);
         if (searchInput) {
@@ -64,7 +65,7 @@ function setupListeners() {
     });
 }
 
-// --- לוגיקת בחירת רכב ---
+// --- לוגיקת בחירת רכב (כולל הקלדה חופשית) ---
 function openPicker(type) {
     const trigger = document.getElementById(`${type}-trigger`);
     if (!trigger || trigger.classList.contains('disabled')) return;
@@ -86,11 +87,7 @@ function openPicker(type) {
     else if (type === 'engine') items = currentEngines;
     else if (type === 'trim') items = currentTrims;
 
-    if (items.length === 0 && type !== 'brand') {
-        grid.innerHTML = '<div style="color:var(--text-muted); grid-column:span 2; padding:20px; text-align:center;">טוען נתונים...</div>';
-        return;
-    }
-
+    // אם אין דאטה מובנה, עדיין ננקה את הגריד כדי לאפשר הקלדה חופשית
     items.forEach(val => {
         const d = document.createElement('div');
         d.className = 'grid-item';
@@ -114,7 +111,7 @@ function selectValue(type, val) {
     const popup = document.getElementById(`${type}-popup`);
     if (popup) popup.classList.remove('active');
 
-    // Cascade (הפעלה מדורגת)
+    // Cascade (הפעלה מדורגת) - מעודכן לתמיכה בערכים שאינם בדאטה
     if (type === 'brand') { 
         resetField('model'); resetField('year'); resetField('engine'); resetField('trim'); 
         enableField('model'); 
@@ -126,12 +123,13 @@ function selectValue(type, val) {
     else if (type === 'year') { 
         resetField('engine'); resetField('trim');
         const brandData = CAR_DATA[selection.brand];
-        if (brandData) {
-            currentEngines = brandData.engines || [];
-            currentTrims = brandData.trims || [];
-            enableField('engine'); 
-            setTimeout(() => openPicker('engine'), 100);
-        }
+        
+        // טוען רשימות אם קיימות, אחרת משאיר ריק להקלדה חופשית
+        currentEngines = brandData?.engines || [];
+        currentTrims = brandData?.trims || [];
+        
+        enableField('engine'); 
+        setTimeout(() => openPicker('engine'), 100);
     }
     else if (type === 'engine') { 
         resetField('trim'); 
@@ -156,40 +154,48 @@ function resetField(id) {
     }
 }
 
-// פונקציית חיפוש משופרת (Business Rule 1)
+// פונקציית חיפוש המאפשרת הקלדה חופשית (Add Custom Item)
 function filterGrid(type, query) {
     const grid = document.getElementById(`${type}-grid`);
     if (!grid) return;
+    
     const items = grid.children;
     let matchFound = false;
+    const cleanQuery = query.trim();
+
+    // ניקוי כפתורי "הוסף" קודמים
+    const oldAddBtn = grid.querySelector('.add-custom-item');
+    if (oldAddBtn) oldAddBtn.remove();
 
     for (let item of items) {
-        const isMatch = item.innerText.toLowerCase().includes(query.toLowerCase());
+        if (item.classList.contains('no-results-msg')) {
+            item.remove();
+            continue;
+        }
+        const isMatch = item.innerText.toLowerCase().includes(cleanQuery.toLowerCase());
         item.style.display = isMatch ? 'block' : 'none';
         if (isMatch) matchFound = true;
     }
 
-    // הצגת הודעה אינפורמטיבית אם לא נמצאה התאמה
-    const existingMsg = grid.querySelector('.no-results-msg');
-    if (existingMsg) existingMsg.remove();
-
-    if (!matchFound && query.trim() !== "") {
-        const msg = document.createElement('div');
-        msg.className = 'no-results-msg';
-        msg.style.cssText = 'color:var(--text-muted); padding:20px; text-align:center; grid-column:span 2; font-size:13px; line-height:1.4;';
-        msg.innerHTML = `לא נמצאו תוצאות מדויקות.<br><small>מומלץ לבחור יצרן, דגם ושנה לקבלת תוצאה טובה יותר.</small>`;
-        grid.appendChild(msg);
+    // אם אין התאמה - הצגת כפתור "הוסף"
+    if (!matchFound && cleanQuery !== "") {
+        const addBtn = document.createElement('div');
+        addBtn.className = 'add-custom-item'; // העיצוב נמצא ב-CSS שלך
+        addBtn.innerHTML = `הוסף: "${cleanQuery}" <br> <span style="font-size:10px; opacity:0.7;">לחץ כאן לשימוש בערך זה</span>`;
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            selectValue(type, cleanQuery);
+        };
+        grid.appendChild(addBtn);
     }
 }
 
-// חוקי הפעלת מנוע AI (Business Rule 2)
 function checkForm() {
     const hasBrand = selection.brand !== '';
     const hasModel = selection.model !== '';
     const btnAi = document.getElementById('btn-ai');
     const statusMsg = document.getElementById('ai-status-msg');
 
-    // ה-AI יפעל רק עם יצרן + דגם
     if (hasBrand && hasModel) {
         btnAi.disabled = false;
         if (statusMsg) statusMsg.style.display = 'none';
@@ -228,7 +234,6 @@ async function startAnalysis() {
     }
 }
 
-// תצוגת תוצאות AI (Business Rule 3 & 5)
 function renderAI(ai) {
     const panel = document.getElementById('ai-panel');
     const badgeContainer = document.getElementById('ai-badge-container');
@@ -238,7 +243,6 @@ function renderAI(ai) {
     const isPrecise = selection.year !== '';
     panel.style.display = 'block';
 
-    // הגדרת תווית (Precise vs General)
     badgeContainer.innerHTML = isPrecise 
         ? `<div class="ai-badge badge-precise">🧠 ניתוח AI מדויק – לשנת ${selection.year}</div>`
         : `<div class="ai-badge badge-general">🧠 ניתוח AI כללי – כל הגרסאות</div>`;
@@ -262,7 +266,6 @@ function renderAI(ai) {
     panel.scrollIntoView({behavior:'smooth'});
 }
 
-// גלילה אוטומטית והדגשה (UX Rule)
 window.scrollToField = (id) => {
     const trigger = document.getElementById(`${id}-trigger`);
     if (trigger) {
@@ -272,15 +275,26 @@ window.scrollToField = (id) => {
     }
 };
 
+// =========================================================
+// לוגיקת הסליידר (Tinder Mode)
+// =========================================================
+
 function startSliderChecklist() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     window.scrollTo(0,0);
+    
     flatChecklist = [];
+    checkHistory = []; // איפוס היסטוריה
+    
     CHECKLIST_CONFIG.forEach(cat => {
         cat.items.forEach(item => flatChecklist.push({ ...item, category: cat.category }));
     });
+    
     currentTaskIndex = 0;
+    score = 100;
+    totalCost = 0;
+    defects = [];
     renderCard();
 }
 
@@ -299,53 +313,82 @@ function renderCard() {
 
     container.innerHTML = `
         <div class="progress-bar-container">
-            <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div class="progress-text">בדיקה ${currentTaskIndex + 1} מתוך ${flatChecklist.length}</div>
+                ${currentTaskIndex > 0 ? `<button class="btn-undo" onclick="window.undoLastStep()" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-muted); padding:5px 12px; border-radius:10px; font-size:12px; cursor:pointer;">↩️ חזור</button>` : '<div></div>'}
+            </div>
             <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
         </div>
 
-        <div id="active-card" class="task-card slide-in">
-            <span class="category-label">${item.category}</span>
-            <h4 style="font-size: 20px; margin: 15px 0;">${item.name}</h4>
-            
-            <div class="instruction-box">
-                <div style="margin-bottom: 12px;">
-                    <strong style="color: var(--accent); display: block; margin-bottom: 4px;">📍 איפה בודקים?</strong>
-                    <span style="font-size: 14px;">${item.location}</span>
-                </div>
+        <div id="active-card" class="task-card slide-in" style="position:relative;">
+            <div style="position:absolute; top:20px; left:20px; background:rgba(239,68,68,0.1); color:var(--danger); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; border:1px solid rgba(239,68,68,0.2);">
+                ליקוי: ~₪${item.cost.toLocaleString()}
+            </div>
+
+            <div>
+                <span class="category-label">${item.category}</span>
+                <h4 style="font-size: 22px; margin: 10px 0 20px 0;">${item.name}</h4>
                 
-                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-                    <strong style="color: var(--accent); display: block; margin-bottom: 8px;">📋 איך בודקים?</strong>
-                    <div style="font-size: 14px; line-height: 1.5;">
-                        ${actionSteps.map(step => `<div style="margin-bottom: 8px;">${step.trim()}</div>`).join('')}
+                <div class="instruction-box">
+                    <div style="display:flex; gap:12px; margin-bottom:12px;">
+                        <div style="font-size:20px; background:var(--bg-deep); width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:10px;">📍</div>
+                        <div style="font-size:15px; color:#e2e8f0;"><strong style="color:var(--accent); display:block; font-size:13px;">איפה בודקים?</strong> ${item.location}</div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                        <strong style="color:var(--accent); display:block; margin-bottom:8px; font-size:13px;">📋 איך בודקים?</strong>
+                        <div style="font-size:14px; line-height:1.6; color:#e2e8f0;">
+                            ${actionSteps.map(step => `<div style="margin-bottom:8px; padding:8px; background:rgba(255,255,255,0.02); border-radius:8px;">${step.trim()}</div>`).join('')}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="buttons-row">
-                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">✅ תקין</button>
-                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">❌ תקלה</button>
+            <div class="buttons-row" style="display:flex; gap:12px; margin-top:20px;">
+                <button class="btn-decision btn-good" style="flex:1;" onclick="window.handleSwipe(true)">✅ תקין</button>
+                <button class="btn-decision btn-bad" style="flex:1;" onclick="window.handleSwipe(false)">❌ תקלה</button>
             </div>
         </div>
     `;
 }
 
 window.handleSwipe = (isGood) => {
-    const card = document.getElementById('active-card');
     const item = flatChecklist[currentTaskIndex];
+    
+    // שמירת המצב הנוכחי להיסטוריה לפני השינוי
+    checkHistory.push({
+        scoreBefore: score,
+        costBefore: totalCost,
+        defectsBefore: [...defects],
+        index: currentTaskIndex
+    });
 
-    if (isGood) {
-        card.classList.add('slide-out-right');
-    } else {
-        card.classList.add('slide-out-left');
+    if (!isGood) {
         score -= item.weight;
         totalCost += item.cost;
         defects.push({ name: item.name, cost: item.cost });
     }
 
+    const card = document.getElementById('active-card');
+    card.classList.add(isGood ? 'slide-out-right' : 'slide-out-left');
+
     setTimeout(() => {
         currentTaskIndex++;
         renderCard();
     }, 300);
+};
+
+// פונקציית ביטול צעד אחרון (Undo)
+window.undoLastStep = () => {
+    if (checkHistory.length === 0) return;
+    
+    const lastState = checkHistory.pop();
+    score = lastState.scoreBefore;
+    totalCost = lastState.costBefore;
+    defects = lastState.defectsBefore;
+    currentTaskIndex = lastState.index;
+    
+    renderCard();
 };
 
 function finishCheck() {
@@ -381,7 +424,7 @@ function finishCheck() {
             });
             ul.innerHTML += `<div style="margin-top:20px; border-top:2px solid var(--card-border); padding-top:15px; font-weight:900; font-size:20px; display:flex; justify-content:space-between;">
                 <span>סה"כ ליישור קו:</span>
-                <span style="color:var(--danger)">₪${totalCost.toLocaleString()}</span>
+                <span id="total-cost-display" style="color:var(--danger)">₪${totalCost.toLocaleString()}</span>
             </div>`;
         } else {
             container.style.display = 'none';
