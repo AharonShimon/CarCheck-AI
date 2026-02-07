@@ -87,14 +87,14 @@ function openPicker(type) {
     else if (type === 'engine') items = currentEngines;
     else if (type === 'trim') items = currentTrims;
 
-    // אם אין דאטה מובנה, עדיין ננקה את הגריד כדי לאפשר הקלדה חופשית
     items.forEach(val => {
         const d = document.createElement('div');
         d.className = 'grid-item';
         d.innerText = val;
         d.onclick = (e) => { 
             e.stopPropagation(); 
-            (type, val); 
+            // *** התיקון כאן למטה - הוספתי את שם הפונקציה selectValue ***
+            selectValue(type, val); 
         };
         grid.appendChild(d);
     });
@@ -115,7 +115,6 @@ function selectValue(type, val) {
     if (type === 'brand') { 
         resetField('model'); resetField('year'); resetField('engine'); resetField('trim'); 
         enableField('model'); 
-        // יצרן ודגם הם חובה - אפשר להשאיר פתיחה אוטומטית כאן אם תרצה
     }
     else if (type === 'model') { 
         resetField('year'); resetField('engine'); resetField('trim'); 
@@ -128,12 +127,10 @@ function selectValue(type, val) {
         currentTrims = brandData?.trims || [];
         
         enableField('engine'); 
-        // הוסר: setTimeout שמפעיל את openPicker('engine')
     }
     else if (type === 'engine') { 
         resetField('trim'); 
         enableField('trim'); 
-        // הוסר: setTimeout שמפעיל את openPicker('trim')
     }
     checkForm();
 }
@@ -153,7 +150,6 @@ function resetField(id) {
     }
 }
 
-// פונקציית חיפוש המאפשרת הקלדה חופשית (Add Custom Item)
 function filterGrid(type, query) {
     const grid = document.getElementById(`${type}-grid`);
     if (!grid) return;
@@ -162,7 +158,6 @@ function filterGrid(type, query) {
     let matchFound = false;
     const cleanQuery = query.trim();
 
-    // ניקוי כפתורי "הוסף" קודמים
     const oldAddBtn = grid.querySelector('.add-custom-item');
     if (oldAddBtn) oldAddBtn.remove();
 
@@ -176,10 +171,9 @@ function filterGrid(type, query) {
         if (isMatch) matchFound = true;
     }
 
-    // אם אין התאמה - הצגת כפתור "הוסף"
     if (!matchFound && cleanQuery !== "") {
         const addBtn = document.createElement('div');
-        addBtn.className = 'add-custom-item'; // העיצוב נמצא ב-CSS שלך
+        addBtn.className = 'add-custom-item'; 
         addBtn.innerHTML = `הוסף: "${cleanQuery}" <br> <span style="font-size:10px; opacity:0.7;">לחץ כאן לשימוש בערך זה</span>`;
         addBtn.onclick = (e) => {
             e.stopPropagation();
@@ -274,17 +268,13 @@ window.scrollToField = (id) => {
     }
 };
 
-// =========================================================
-// לוגיקת הסליידר (Tinder Mode)
-// =========================================================
-
 function startSliderChecklist() {
     document.getElementById('screen-input').style.display = 'none';
     document.getElementById('screen-check').style.display = 'block';
     window.scrollTo(0,0);
     
     flatChecklist = [];
-    checkHistory = []; // איפוס היסטוריה
+    checkHistory = []; 
     
     CHECKLIST_CONFIG.forEach(cat => {
         cat.items.forEach(item => flatChecklist.push({ ...item, category: cat.category }));
@@ -354,7 +344,6 @@ function renderCard() {
 window.handleSwipe = (isGood) => {
     const item = flatChecklist[currentTaskIndex];
     
-    // שמירת המצב הנוכחי להיסטוריה לפני השינוי
     checkHistory.push({
         scoreBefore: score,
         costBefore: totalCost,
@@ -377,7 +366,6 @@ window.handleSwipe = (isGood) => {
     }, 300);
 };
 
-// פונקציית ביטול צעד אחרון (Undo)
 window.undoLastStep = () => {
     if (checkHistory.length === 0) return;
     
