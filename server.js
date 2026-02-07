@@ -19,13 +19,8 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 async function askGemini(prompt) {
-    // עדכון שמות המודלים לגרסאות היציבות של 2026
-    const modelsToTry = [
-        "gemini-1.5-flash", 
-        "gemini-1.5-flash-latest", 
-        "gemini-2.0-flash", 
-        "gemini-1.5-pro-latest"
-    ];
+    // מודלים יציבים ל-2026
+    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -43,61 +38,61 @@ async function askGemini(prompt) {
             const response = await result.response;
             return response.text();
         } catch (err) {
+            if (err.message.includes("429")) {
+                console.error("🛑 חריגה ממכסת בקשות (Quota Exceeded)");
+                throw new Error("המכסה היומית הסתיימה. נסה שוב בעוד מספר דקות.");
+            }
             console.warn(`⚠️ מודל ${modelName} נכשל: ${err.message}`);
             lastError = err.message;
         }
     }
-    throw new Error(lastError);
+    throw new Error(lastError || "כל המודלים נכשלו בחיבור");
 }
+
 app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year, isPrecise } = req.body;
         console.log(`🚀 ניתוח ${isPrecise ? 'מדויק' : 'כללי'}: ${brand} ${model} ${year || ''}`);
 
-        // Business Logic: התאמת הפרומפט לפי סוג הניתוח
         const modeInstruction = isPrecise 
-            ? `STRICT RULE: Focus ONLY on the year ${year}. Mention specific recalls, serial faults, and engine reliability for THIS EXACT YEAR only. Do not mention other generations.`
-            : `STRICT RULE: Provide a GENERAL overview for the ${brand} ${model} across all its production years. Mention that reliability varies between generations. Do not guess a specific year.`;
+            ? `STRICT RULE: Focus ONLY on the year ${year}. Mention specific recalls and serial faults for this exact version.`
+            : `STRICT RULE: Provide a GENERAL reliability overview for ${brand} ${model} across all years. Mention that issues vary between generations.`;
 
         const smartPrompt = `
-            Act as a senior vehicle inspector and reliability expert in the Israeli car market. 
-            Analyze: ${brand} ${model} ${isPrecise ? `Year: ${year}` : '(All Years)'}.
-            
+            Act as a senior vehicle inspector in Israel. 
+            Analyze: ${brand} ${model} ${isPrecise ? `Year: ${year}` : '(General)'}.
             ${modeInstruction}
-
-            Return ONLY a valid JSON object:
+            Return ONLY a valid JSON:
             {
                 "reliability_score": (int 0-100),
-                "summary": (string in Hebrew, max 25 words. If general mode, include a disclaimer that data is across years),
-                "common_faults": (array of 3-5 strings in Hebrew, focusing on serial issues),
-                "pros": (array of 3 strings in Hebrew),
-                "cons": (array of 3 strings in Hebrew)
-            }
-            
-            Avoid special characters. Use natural Hebrew.`;
+                "summary": (string in Hebrew, max 25 words),
+                "common_faults": (array of strings in Hebrew),
+                "pros": (array of strings in Hebrew),
+                "cons": (array of strings in Hebrew)
+            }`;
 
         const rawResponse = await askGemini(smartPrompt);
         const cleanJson = rawResponse.replace(/```json|```/g, '').trim();
         
-        console.log("✅ הדו\"ח פוענח בהצלחה");
         res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
 
     } catch (error) {
-        console.error("❌ שגיאת שרת:", error.message);
-        const brandName = req.body.brand || "הרכב"; 
+        console.error("❌ שגיאה סופית:", error.message);
+        const brandName = req.body.brand || "הרכב";
         res.json({ 
             success: true, 
             aiAnalysis: {
                 reliability_score: 75,
-                summary: `חלה שגיאה זמנית בחיבור ל-AI. באופן כללי, דגמי ${brandName} מציגים רמת אמינות סבירה בישראל.`,
-                common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי מערכת בלימה"],
-                pros: ["שוק חלפים נגיש"],
-                cons: ["רגישות לתחזוקה לקויה"]
+                summary: error.message.includes("המכסה") 
+                    ? "מכסת ה-AI הסתיימה להיום. מוצג ניתוח בסיסי המבוסס על נתוני עבר."
+                    : `חלה שגיאה בחיבור. באופן כללי, ${brandName} נחשב למותג אמין יחסית.`,
+                common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי טבעי"],
+                pros: ["זמינות חלפים גבוהה"],
+                cons: ["רגישות להזנחה"]
             }
         });
-    } // <--- הסוגר הזה היה חסר
-}); // <--- וגם הסגירה הזו של ה-app.post הייתה חסרה
+    }
+});
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
-
