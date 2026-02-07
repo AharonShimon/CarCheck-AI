@@ -78,19 +78,20 @@ app.post('/analyze-ai', async (req, res) => {
         res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
 
     } catch (error) {
-        console.error("❌ שגיאת שרת:", error.message);
-        res.json({ 
-            success: true, 
-            aiAnalysis: {
-                reliability_score: 75,
-                summary: "חלה שגיאה זמנית בחיבור ל-AI. באופן כללי, דגמי ${req.body.brand} מציגים רמת אמינות סבירה בישראל.",
-                common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי מערכת בלימה"],
-                pros: ["שוק חלפים נגיש"],
-                cons: ["רגישות לתחזוקה לקויה"]
-            }
-        });
-    }
-});
+    console.error("❌ שגיאת שרת:", error.message);
+    const brandName = req.body.brand || "הרכב"; // חילוץ שם המותג
+    res.json({ 
+        success: true, 
+        aiAnalysis: {
+            reliability_score: 75,
+            summary: `חלה שגיאה זמנית בחיבור ל-AI. באופן כללי, דגמי ${brandName} מציגים רמת אמינות סבירה בישראל.`,
+            common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי מערכת בלימה"],
+            pros: ["שוק חלפים נגיש"],
+            cons: ["רגישות לתחזוקה לקויה"]
+        }
+    });
+}
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
+
