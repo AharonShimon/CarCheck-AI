@@ -19,7 +19,13 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 async function askGemini(prompt) {
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
+    // עדכון שמות המודלים לגרסאות היציבות של 2026
+    const modelsToTry = [
+        "gemini-1.5-flash", 
+        "gemini-1.5-flash-latest", 
+        "gemini-2.0-flash", 
+        "gemini-1.5-pro-latest"
+    ];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -37,13 +43,12 @@ async function askGemini(prompt) {
             const response = await result.response;
             return response.text();
         } catch (err) {
-            console.warn(`⚠️ מודל ${modelName} נכשל.`);
+            console.warn(`⚠️ מודל ${modelName} נכשל: ${err.message}`);
             lastError = err.message;
         }
     }
     throw new Error(lastError);
 }
-
 app.post('/analyze-ai', async (req, res) => {
     try {
         const { brand, model, year, isPrecise } = req.body;
@@ -95,3 +100,4 @@ app.post('/analyze-ai', async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
+
