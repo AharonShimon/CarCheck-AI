@@ -49,7 +49,7 @@ app.post('/analyze-ai', async (req, res) => {
         const { brand, model, year, isPrecise } = req.body;
         console.log(`🚀 ניתוח ${isPrecise ? 'מדויק' : 'כללי'}: ${brand} ${model} ${year || ''}`);
 
-        // Business Logic: התאמת הפרומפט לפי סוג הניתוח (מדויק או כללי)
+        // Business Logic: התאמת הפרומפט לפי סוג הניתוח
         const modeInstruction = isPrecise 
             ? `STRICT RULE: Focus ONLY on the year ${year}. Mention specific recalls, serial faults, and engine reliability for THIS EXACT YEAR only. Do not mention other generations.`
             : `STRICT RULE: Provide a GENERAL overview for the ${brand} ${model} across all its production years. Mention that reliability varies between generations. Do not guess a specific year.`;
@@ -78,20 +78,20 @@ app.post('/analyze-ai', async (req, res) => {
         res.json({ success: true, aiAnalysis: JSON.parse(cleanJson) });
 
     } catch (error) {
-    console.error("❌ שגיאת שרת:", error.message);
-    const brandName = req.body.brand || "הרכב"; // חילוץ שם המותג
-    res.json({ 
-        success: true, 
-        aiAnalysis: {
-            reliability_score: 75,
-            summary: `חלה שגיאה זמנית בחיבור ל-AI. באופן כללי, דגמי ${brandName} מציגים רמת אמינות סבירה בישראל.`,
-            common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי מערכת בלימה"],
-            pros: ["שוק חלפים נגיש"],
-            cons: ["רגישות לתחזוקה לקויה"]
-        }
-    });
-}
+        console.error("❌ שגיאת שרת:", error.message);
+        const brandName = req.body.brand || "הרכב"; 
+        res.json({ 
+            success: true, 
+            aiAnalysis: {
+                reliability_score: 75,
+                summary: `חלה שגיאה זמנית בחיבור ל-AI. באופן כללי, דגמי ${brandName} מציגים רמת אמינות סבירה בישראל.`,
+                common_faults: ["יש לבדוק היסטוריית טיפולים", "בלאי מערכת בלימה"],
+                pros: ["שוק חלפים נגיש"],
+                cons: ["רגישות לתחזוקה לקויה"]
+            }
+        });
+    } // <--- הסוגר הזה היה חסר
+}); // <--- וגם הסגירה הזו של ה-app.post הייתה חסרה
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 המוסכניק באוויר בפורט ${PORT}`));
-
