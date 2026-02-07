@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupListeners() {
-    // 1. פתיחת תפריטים (Popup)
+    // 1. פתיחת תפריטים
     ['brand', 'model', 'year', 'engine', 'trim'].forEach(type => {
         const trigger = document.getElementById(`${type}-trigger`);
         if (trigger) {
@@ -25,7 +25,7 @@ function setupListeners() {
         }
     });
 
-    // 2. חיפוש חופשי
+    // 2. חיפוש חופשי (משופר)
     ['brand', 'model', 'engine', 'trim'].forEach(type => {
         const searchInput = document.getElementById(`${type}-search`);
         if (searchInput) {
@@ -86,7 +86,7 @@ function openPicker(type) {
     else if (type === 'engine') items = currentEngines;
     else if (type === 'trim') items = currentTrims;
 
-    if (items.length === 0) {
+    if (items.length === 0 && type !== 'brand') {
         grid.innerHTML = '<div style="color:var(--text-muted); grid-column:span 2; padding:20px; text-align:center;">טוען נתונים...</div>';
         return;
     }
@@ -114,6 +114,7 @@ function selectValue(type, val) {
     const popup = document.getElementById(`${type}-popup`);
     if (popup) popup.classList.remove('active');
 
+    // Cascade (הפעלה מדורגת)
     if (type === 'brand') { 
         resetField('model'); resetField('year'); resetField('engine'); resetField('trim'); 
         enableField('model'); 
@@ -149,38 +150,68 @@ function resetField(id) {
     selection[id] = '';
     const trigger = document.getElementById(`${id}-trigger`);
     if (trigger) {
-        trigger.classList.add('disabled');
+        if (id !== 'engine' && id !== 'trim') trigger.classList.add('disabled');
         const span = trigger.querySelector('span');
-        if (span) span.innerText = id === 'engine' ? '🔌 בחר מנוע...' : id === 'trim' ? '✨ בחר גימור...' : 'בחר...';
+        if (span) span.innerText = id === 'engine' ? '🔌 לשיפור הדיוק...' : id === 'trim' ? '✨ לשיפור הדיוק...' : 'בחר...';
     }
 }
 
+// פונקציית חיפוש משופרת (Business Rule 1)
 function filterGrid(type, query) {
     const grid = document.getElementById(`${type}-grid`);
     if (!grid) return;
     const items = grid.children;
+    let matchFound = false;
+
     for (let item of items) {
-        item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'block' : 'none';
+        const isMatch = item.innerText.toLowerCase().includes(query.toLowerCase());
+        item.style.display = isMatch ? 'block' : 'none';
+        if (isMatch) matchFound = true;
+    }
+
+    // הצגת הודעה אינפורמטיבית אם לא נמצאה התאמה
+    const existingMsg = grid.querySelector('.no-results-msg');
+    if (existingMsg) existingMsg.remove();
+
+    if (!matchFound && query.trim() !== "") {
+        const msg = document.createElement('div');
+        msg.className = 'no-results-msg';
+        msg.style.cssText = 'color:var(--text-muted); padding:20px; text-align:center; grid-column:span 2; font-size:13px; line-height:1.4;';
+        msg.innerHTML = `לא נמצאו תוצאות מדויקות.<br><small>מומלץ לבחור יצרן, דגם ושנה לקבלת תוצאה טובה יותר.</small>`;
+        grid.appendChild(msg);
     }
 }
 
+// חוקי הפעלת מנוע AI (Business Rule 2)
 function checkForm() {
-    const ready = Object.values(selection).every(v => v !== '');
+    const hasBrand = selection.brand !== '';
+    const hasModel = selection.model !== '';
     const btnAi = document.getElementById('btn-ai');
-    if (btnAi) btnAi.disabled = !ready;
+    const statusMsg = document.getElementById('ai-status-msg');
+
+    // ה-AI יפעל רק עם יצרן + דגם
+    if (hasBrand && hasModel) {
+        btnAi.disabled = false;
+        if (statusMsg) statusMsg.style.display = 'none';
+    } else {
+        btnAi.disabled = true;
+        if (statusMsg) statusMsg.style.display = 'block';
+    }
 }
 
 async function startAnalysis() {
     const loader = document.getElementById('loader');
-    const btnAi = document.getElementById('btn-ai');
+    const loaderText = document.getElementById('loader-text');
+    const isPrecise = selection.year !== '';
+    
     if (loader) loader.style.display = 'flex';
-    if (btnAi) btnAi.disabled = true;
+    if (loaderText) loaderText.innerText = isPrecise ? `מפיק ניתוח מדויק לשנת ${selection.year}...` : "מפיק ניתוח כללי לדגם...";
 
     try {
         const res = await fetch('/analyze-ai', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ ...selection, userNotes: "" })
+            body: JSON.stringify({ ...selection, isPrecise })
         });
         const data = await res.json();
         if(data.success) renderAI(data.aiAnalysis);
@@ -194,24 +225,52 @@ async function startAnalysis() {
         });
     } finally {
         if (loader) loader.style.display = 'none';
-        if (btnAi) btnAi.disabled = false;
     }
 }
 
+// תצוגת תוצאות AI (Business Rule 3 & 5)
 function renderAI(ai) {
     const panel = document.getElementById('ai-panel');
-    if (!panel) return;
+    const badgeContainer = document.getElementById('ai-badge-container');
+    const content = document.getElementById('ai-content');
+    if (!panel || !badgeContainer || !content) return;
+
+    const isPrecise = selection.year !== '';
     panel.style.display = 'block';
-    document.getElementById('ai-content').innerHTML = `
-        <div style="font-size:40px; font-weight:900; color:var(--accent); text-align:center;">${ai.reliability_score}</div>
-        <p style="text-align:center; color:#cbd5e1; line-height:1.5;">${ai.summary}</p>
-        <div style="margin-top:10px;">
+
+    // הגדרת תווית (Precise vs General)
+    badgeContainer.innerHTML = isPrecise 
+        ? `<div class="ai-badge badge-precise">🧠 ניתוח AI מדויק – לשנת ${selection.year}</div>`
+        : `<div class="ai-badge badge-general">🧠 ניתוח AI כללי – כל הגרסאות</div>`;
+
+    content.innerHTML = `
+        <div style="font-size:40px; font-weight:900; color:var(--accent); text-align:center; margin-bottom:10px;">${ai.reliability_score}</div>
+        <p style="text-align:center; color:#cbd5e1; line-height:1.5; margin-bottom:20px;">${ai.summary}</p>
+        
+        ${!isPrecise ? `
+            <div class="ai-warning-box">
+                <p>המידע מתייחס למגוון שנות ייצור ומנועים. ייתכנו הבדלים בין גרסאות.</p>
+                <button onclick="window.scrollToField('year')" class="btn-text-link">רוצה ניתוח מדויק יותר? בחר שנת ייצור</button>
+            </div>
+        ` : ''}
+
+        <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
             <strong style="color:var(--success)">✅ יתרונות:</strong> ${ai.pros.join(', ')}<br>
-            <strong style="color:var(--danger); margin-top:5px; display:inline-block;">❌ תקלות נפוצות:</strong> ${ai.common_faults.join(', ')}
+            <strong style="color:var(--danger); margin-top:8px; display:inline-block;">❌ תקלות נפוצות:</strong> ${ai.common_faults.join(', ')}
         </div>
     `;
     panel.scrollIntoView({behavior:'smooth'});
 }
+
+// גלילה אוטומטית והדגשה (UX Rule)
+window.scrollToField = (id) => {
+    const trigger = document.getElementById(`${id}-trigger`);
+    if (trigger) {
+        trigger.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        trigger.classList.add('highlight-pulse');
+        setTimeout(() => trigger.classList.remove('highlight-pulse'), 2500);
+    }
+};
 
 function startSliderChecklist() {
     document.getElementById('screen-input').style.display = 'none';
@@ -248,7 +307,7 @@ function renderCard() {
             <span class="category-label">${item.category}</span>
             <h4 style="font-size: 20px; margin: 15px 0;">${item.name}</h4>
             
-            <div class="instruction-box" style="text-align: right; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div class="instruction-box">
                 <div style="margin-bottom: 12px;">
                     <strong style="color: var(--accent); display: block; margin-bottom: 4px;">📍 איפה בודקים?</strong>
                     <span style="font-size: 14px;">${item.location}</span>
@@ -262,9 +321,9 @@ function renderCard() {
                 </div>
             </div>
 
-            <div class="buttons-row" style="display: flex; gap: 12px;">
-                <button class="btn-decision btn-good" style="flex: 1;" onclick="window.handleSwipe(true)">✅ תקין</button>
-                <button class="btn-decision btn-bad" style="flex: 1;" onclick="window.handleSwipe(false)">❌ תקלה</button>
+            <div class="buttons-row">
+                <button class="btn-decision btn-good" onclick="window.handleSwipe(true)">✅ תקין</button>
+                <button class="btn-decision btn-bad" onclick="window.handleSwipe(false)">❌ תקלה</button>
             </div>
         </div>
     `;
